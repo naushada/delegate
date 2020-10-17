@@ -3,7 +3,121 @@
 
 #include <protocol.h>
 
+int32_t mna::dhcp::OnDiscover::receive(void* parent, const char* inPtr, uint32_t inLen)
+{
+  std::cout << "6.OnDiscover::receive ---> " << inPtr << "inLen " << inLen << std::endl;
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
+  /** move to Next State. */
+  dEnt->setState<OnRequest>(dEnt->instRequest());
+  /* Start Processing DHCP DISCOVER Request.*/
+  return(REQUEST);
+}
 
+void mna::dhcp::OnDiscover::onEntry()
+{
+  std::cout << "5.OnDiscover::onEntry is invoked " << std::endl;
+}
+
+void mna::dhcp::OnDiscover::onExit()
+{
+  std::cout << "5.OnDiscover::onExit is invoked " << std::endl;
+}
+
+
+void mna::dhcp::OnRequest::onEntry()
+{
+  std::cout << "5.OnRequest::onEntry is invoked " << std::endl;
+}
+
+void mna::dhcp::OnRequest::onExit()
+{
+  std::cout << "5.OnRequest::onExit is invoked " << std::endl;
+}
+
+int32_t mna::dhcp::OnRequest::receive(void* parent, const char* inPtr, uint32_t inLen)
+{
+  std::cout << "OnRequest::receive ---> " << inPtr << "inLen " << inLen << std::endl;
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
+  dEnt->setState<OnRelease>(dEnt->instRelease());
+  /* Start Processing DHCP DISCOVER Request.*/
+  return(RELEASE);
+}
+
+void mna::dhcp::OnRelease::onEntry()
+{
+  std::cout << "5.OnRelease::onEntry is invoked " << std::endl;
+}
+
+void mna::dhcp::OnRelease::onExit()
+{
+  std::cout << "5.OnRelease::onExit is invoked " << std::endl;
+}
+
+int32_t mna::dhcp::OnRelease::receive(void* parent, const char* inPtr, uint32_t inLen)
+{
+  std::cout << "Onrelease::receive ---> " << inPtr << "inLen " << inLen << std::endl;
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
+  dEnt->setState<OnDiscover>(dEnt->instDiscover());
+  /* Start Processing DHCP DISCOVER Request.*/
+  return(RELEASE);
+}
+
+int32_t mna::dhcp::dhcpEntry::rx(const char* in, uint32_t inLen)
+{
+  /** Kick the state machine now. */
+  std::cout << "3.dhcpEntry::rx is invoked " << std::endl;
+  int32_t ret = getState().rx(this, in, inLen);
+  /* move FSM into next State now.*/
+  switch (ret) {
+    case REQUEST:
+      std::cout << "OnRequest State is set " << std::endl;
+      /* Initializing the State Machine. */
+      setState<OnRequest>(m_instRequest);
+    break;
+  }
+
+  return(0);
+}
+
+
+int32_t mna::dhcp::server::rx(const char* in, uint32_t inLen)
+{
+  std::cout << "1.server::rx received REQ " <<std::endl;
+  dhcp_entry_onMAC_t::const_iterator it;
+
+  const uint8_t *clientMAC = ((dhcp_t *)in)->chaddr;
+  uint8_t len = ((dhcp_t *)in)->hlen;
+
+  std::string MAC = std::string((const char *)clientMAC, len);
+
+  it = m_dhcpUmapOnMAC.find(MAC);
+
+  if(it != m_dhcpUmapOnMAC.end()) {
+
+    std::cout << "2.dhcpEntry Instance is found " << std::endl;
+    /* DHCP Client Entry is found. */
+    dhcpEntry dEnt = it->second;
+    /* Feed to FSM now. */
+    dEnt.rx(in, inLen);
+
+  } else {
+
+    std::cout << "2.dhcpEntry instantiated " << std::endl;
+    /* New DHCP Client Request, create an entry for it. */
+    dhcpEntry dEnt(123, m_routerIP, m_dnsIP, m_lease, m_mtu, m_serverID, m_domainName);
+
+    bool ret = m_dhcpUmapOnMAC.insert(std::pair<std::string, dhcpEntry>(MAC, dEnt)).second;
+
+    if(!ret) {
+      std::cout << "Insertion of dhcpEntry failed " << std::endl;
+    }
+
+    dEnt.rx(in, inLen);
+  }
+
+  return(0);
+
+}
 
 int main()
 {
