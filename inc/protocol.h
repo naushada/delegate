@@ -62,9 +62,10 @@ namespace mna {
       }
 
       /**
-       * @brief
-       * @param
-       * @return
+       * @brief This member function is used to get the reference of the instance of state class. The state is represented
+       *        calss and that class has to  implement certain member method.
+       * @param none
+       * @return Reference to FSM instance.
        * */
       FSM& getState()
       {
@@ -72,9 +73,11 @@ namespace mna {
       }
 
       /**
-       * @brief
-       * @param
-       * @return
+       * @brief This member function is invoked from respective state which inturn invokes delegates.
+       * @param pointer to parent who has instantiated the FSM class.
+       * @param pointer to const char of input buffer.
+       * @param length of received length.
+       * @return whatever deledagte returns.
        * */
       int32_t rx(void* parent, const char *inPtr, uint32_t inLen) const
       {
@@ -89,24 +92,79 @@ namespace mna {
   };
 
   namespace eth {
-  };
+
+    typedef struct ETH
+    {
+      /*destination MAC Address.*/
+      char dest[ETH_ALEN];
+      /*source MAC Address.*/
+      char src[ETH_ALEN];
+      /*Packet Type ID.*/
+      uint16_t proto;
+    }__attribute__((packed))ETH;
+
+    enum proto_t : uint16_t {
+      IPv4 = 0x0800,
+      IPv6 = 0x86DD,
+      ARP = 0x0806,
+      EAPOL = 0x888E,
+      PPP = 0x880B
+    };
+
+    class ether {
+      public:
+        using upstream_t = delegate<int32_t (const char*, uint32_t)>;
+
+        ether(std::string& intf) : m_intf(intf)
+        {
+        }
+
+        ether(const ether& ) = default;
+        ether(ether&& ) = default;
+        ~ether() = default;
+
+        int32_t rx(const char* ethPacket, uint32_t packetLen, upstream_t upstream)
+        {
+          return(upstream(ethPacket, packetLen));
+        }
+
+      private:
+
+        std::string m_intf;
+        uint32_t m_index;
+    };
+
+  }
 
   namespace ipv4 {
-  };
+    class ip {
+    };
 
-  namespace udp {
-  };
+  }
 
-  namespace tcp {
-  };
+  namespace ipv6 {
+    class ip {
+    };
 
-  namespace tun {
-  };
+  }
+
+  namespace transport {
+
+    class udp {
+    };
+
+    class tcp {
+    };
+
+    class tun {
+    };
+
+  }
 
   namespace dns {
-  };
+  }
 
-  namespace arp {
+  class arp {
   };
 
   /**
@@ -230,9 +288,6 @@ namespace mna {
           m_val = val;
         }
     };
-
-    class dhcpEntry;
-    class OnRequest;
 
     class OnDiscover {
       public:
@@ -461,9 +516,9 @@ namespace mna {
         std::string m_domainName;
     };
 
-  };
+  }
 
-};
+}
 
 
 
