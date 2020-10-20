@@ -225,10 +225,9 @@ namespace mna {
     /** Element TLV received in request (DISCOVER, REQUEST) */
     struct element_def_t {
 
-      private:
-        uint8_t m_tag;
-        uint8_t m_len;
-        std::array<uint8_t, 255> m_val;
+      uint8_t m_tag;
+      uint8_t m_len;
+      std::array<uint8_t, 255> m_val;
 
       public:
 
@@ -246,11 +245,11 @@ namespace mna {
 
         element_def_t& operator=(element_def_t&& elem) = default;
 
-        element_def_t& operator=(element_def_t& elem)
+        element_def_t& operator=(const element_def_t& elem)
         {
-          std::swap(m_tag, elem.m_tag);
-          std::swap(m_len, elem.m_len);
-          std::swap(m_val, elem.m_val);
+          m_tag = elem.m_tag;
+          m_len = elem.m_len;
+          m_val = elem.m_val;
 
           return *this;
         }
@@ -374,6 +373,8 @@ namespace mna {
     }__attribute__((packed))dhcp_t;
 
 
+    using element_def_UMap_t = std::unordered_map<uint8_t, element_def_t>;
+
     class dhcpEntry {
       public:
 
@@ -420,6 +421,7 @@ namespace mna {
         }
 
         int32_t rx(const char *in, uint32_t inLen);
+
         OnDiscover& instDiscover()
         {
           return(m_instDiscover);
@@ -446,8 +448,12 @@ namespace mna {
         }
 
         OnLeaseExpire& instLeaseExpire();
+        int32_t parseOptions(const uint8_t* in, uint32_t inLen);
 
       private:
+        /** This UMap stores DHCP Option received in DISCOVER/REQUEST. */
+        element_def_UMap_t m_elemDefUMap;
+
         /* Per DHCP Client State Machine. */
         FSM* m_fsm;
 

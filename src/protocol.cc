@@ -62,8 +62,57 @@ int32_t mna::dhcp::OnRelease::receive(void* parent, const char* inPtr, uint32_t 
   return(RELEASE);
 }
 
+int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
+{
+  uint32_t offset = 0;
+
+  while(inLen > 0) {
+
+    switch(in[offset]) {
+
+      case mna::dhcp::END:
+        inLen = 0;
+        break;
+
+      default:
+        mna::dhcp::element_def_t elm;
+        uint8_t tag = in[offset];
+
+        element_def_UMap_t::const_iterator it;
+        it = m_elemDefUMap.find(tag);
+
+        if(it == m_elemDefUMap.end()) {
+
+          /*Not found in the MAP.*/
+          elm.m_tag = in[offset++];
+          elm.m_len = in[offset++];
+          memcpy(elm.m_val.data(), &in[offset], elm.m_len);
+          offset += elm.m_len;
+
+          /*Add it into MAP now.*/
+          m_elemDefUMap.insert(std::pair<uint8_t, element_def_t>(tag, elm));
+
+        } else {
+
+          /*Found in the Map , Update with new contents received now.*/
+          elm = it->second;
+          elm.m_tag = in[offset++];
+          elm.m_len = in[offset++];
+          memcpy(elm.m_val.data(), &in[offset], elm.m_len);
+          offset += elm.m_len;
+
+        }
+    }
+  }
+  return(0);
+}
+
 int32_t mna::dhcp::dhcpEntry::rx(const char* in, uint32_t inLen)
 {
+  uint8_t *opt = (uint8_t *)&in[sizeof(mna::dhcp::dhcp_t)];
+
+  parseOptions(opt, (inLen - sizeof(mna::dhcp::dhcp_t)));
+
   /** Kick the state machine now. */
   std::cout << "3.dhcpEntry::rx is invoked " << std::endl;
   int32_t ret = getState().rx(this, in, inLen);
