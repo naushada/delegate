@@ -3,12 +3,11 @@ project(delegate)
 
 include_directories(inc)
 include_directories(/usr/local/ACE_TAO-6.5.11/include)
+link_directories(/usr/local/ACE_TAO-6.5.11/lib)
 
 #However, the file(GLOB...) allows for wildcard additions:
 file(GLOB SOURCES "src/*.cc")
 
-set(PROJECT_LINK_LIBS libACE.so)
-link_directories(/usr/local/ACE_TAO-6.5.11/lib)
-
 add_executable(unimanage ${SOURCES})
+target_link_libraries(unimanage ACE)
 

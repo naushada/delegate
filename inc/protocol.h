@@ -96,9 +96,9 @@ namespace mna {
     typedef struct ETH
     {
       /*destination MAC Address.*/
-      char dest[ETH_ALEN];
+      char dest[6];
       /*source MAC Address.*/
-      char src[ETH_ALEN];
+      char src[6];
       /*Packet Type ID.*/
       uint16_t proto;
     }__attribute__((packed))ETH;
@@ -123,13 +123,13 @@ namespace mna {
         ether(ether&& ) = default;
         ~ether() = default;
 
-        int32_t rx(const char* ethPacket, uint32_t packetLen, upstream_t upstream)
+        int32_t rx(const char* ethPacket, uint32_t packetLen)
         {
           return(upstream(ethPacket, packetLen));
         }
 
       private:
-
+        upstream_t upstream;
         std::string m_intf;
         uint32_t m_index;
     };

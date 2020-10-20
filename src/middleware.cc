@@ -57,7 +57,7 @@ ACE_HANDLE mna::middleware::get_handle(void) const
 ACE_INT32 mna::middleware::handle_signal(int signum, siginfo_t *s, ucontext_t *u)
 {
   ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the signum is %u\n"), signum));
-  process_signal(signum);
+  //process_signal(signum);
 
   return(0);
 }
@@ -70,7 +70,7 @@ ACE_INT32 mna::middleware::handle_signal(int signum, siginfo_t *s, ucontext_t *u
  * @param  argument which was passed while starting the timer.
  * @return 0 for success else for failure.
  */
-ACE_INT32 mna::middleware::handle_timeout(ACE_Time_Value &tv, const void *arg)
+ACE_HANDLE mna::middleware::handle_timeout(const ACE_Time_Value &tv, const void *arg)
 {
   ACE_TRACE(("mna::middleware::handle_timeout"));
   process_timeout(arg);
@@ -86,7 +86,7 @@ ACE_INT32 mna::middleware::handle_timeout(ACE_Time_Value &tv, const void *arg)
  * */
 long mna::middleware::start_timer(ACE_UINT32 to,
                                   const void *act,
-                                  ACE_Time_Value interval = ACE_Time_Value::zero)
+                                  ACE_Time_Value interval)
 {
   ACE_TRACE(("mna::middleware::start_timer"));
   ACE_Time_Value delay(to);
