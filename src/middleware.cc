@@ -18,7 +18,7 @@ ACE_INT32 mna::middleware::handle_input(ACE_HANDLE handle)
 
   ACE_NEW_RETURN(mb, ACE_Message_Block(mna::SIZE_1MB), -1);
 
-  mna::eth::ethernet m_instEth;
+  mna::eth::ether m_instEth(m_intf);
 
   do
   {
@@ -130,7 +130,7 @@ ACE_HANDLE mna::middleware::open_and_bind_intf()
       break;
     }
 
-    ACE_OS::setsockopt(handle, SOL_SOCKET, TCP_NODELAY, &option, sizeof(option));
+    ACE_OS::setsockopt(handle, SOL_SOCKET, O_NDELAY, &option, sizeof(option));
     ACE_OS::setsockopt(handle, SOL_SOCKET, SO_BROADCAST, &option, sizeof(option));
     ACE_OS::memset((void *)&ifr, 0, sizeof(ifr));
     ACE_OS::strncpy(ifr.ifr_name, m_intf.c_str(), (IFNAMSIZ - 1));

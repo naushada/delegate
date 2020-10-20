@@ -1,17 +1,31 @@
 #ifndef __MIDDLEWARE_H__
 #define __MIDDLEWARE_H__
 
+#include <fcntl.h>
+#include <sys/un.h>
+#include <sys/ioctl.h>
+#include <linux/if_packet.h>
+
+#include "ace/Reactor.h"
 #include "ace/SString.h"
 #include "ace/Hash_Map_Manager.h"
 #include "ace/Null_Mutex.h"
 #include "ace/Event_Handler.h"
 #include "ace/Basic_Types.h"
+#include "ace/SOCK_Dgram.h"
+#include "ace/INET_Addr.h"
+#include "ace/Message_Block.h"
 
 namespace mna {
 
   enum common_t : uint32_t {
     SIZE_1KB = 1024,
-    SIZE_1MB = (SIZE_1KB * SIZE_1KB)
+    SIZE_1MB = (SIZE_1KB * SIZE_1KB),
+    ETH_ALEN = 6,
+    ETH_P_ALL = 0x0003,
+    //TCP_NODELAY = 1,
+    //PACKET_MR_PROMISC = 1,
+    //PACKET_ADD_MEMBERSHIP = 1
   };
 
   class middleware : public ACE_Event_Handler {
