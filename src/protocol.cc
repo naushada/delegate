@@ -7,10 +7,38 @@ int32_t mna::dhcp::OnDiscover::receive(void* parent, const char* inPtr, uint32_t
 {
   std::cout << "6.OnDiscover::receive ---> " << inPtr << "inLen " << inLen << std::endl;
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
+
+  mna::dhcp::element_def_UMap_t::const_iterator it;
+  it = dEnt->m_elemDefUMap.find(mna::dhcp::MESSAGE_TYPE);
+
+  if(it != dEnt->m_elemDefUMap.end()) {
+
+    mna::dhcp::element_def_t elm = it->second;
+
+    switch(std::get<0>(elm.get_val())) {
+
+      case mna::dhcp::DISCOVER:
+        dEnt->buildAndSendOffer((const uint8_t* )inPtr, inLen);
+        break;
+
+      case mna::dhcp::REQUEST:
+        break;
+
+      case mna::dhcp::RELEASE:
+        break;
+
+      case mna::dhcp::INFORM:
+        break;
+
+      default:
+        break;
+    }
+  }
+
   /** move to Next State. */
   dEnt->setState<OnRequest>(dEnt->instRequest());
   /* Start Processing DHCP DISCOVER Request.*/
-  return(REQUEST);
+  return(0);
 }
 
 void mna::dhcp::OnDiscover::onEntry()
@@ -62,6 +90,29 @@ int32_t mna::dhcp::OnRelease::receive(void* parent, const char* inPtr, uint32_t 
   return(RELEASE);
 }
 
+int32_t mna::dhcp::dhcpEntry::tx(uint8_t* out, uint32_t outLen)
+{
+  return(0);
+}
+
+int32_t mna::dhcp::dhcpEntry::buildAndSendAck(const uint8_t* in, uint32_t inLen)
+{
+  return(0);
+}
+
+int32_t mna::dhcp::dhcpEntry::buildAndSendOffer(const uint8_t* in, uint32_t inLen)
+{
+  return(0);
+}
+
+/**
+ * @brief This member function parses the DHCP OPTION followed by DHCP Header and stores
+ *        them into unordered_map based on tag. tag will be the KEY and value
+ *        is the instance of element_def_t.
+ * @param pointer to the dhcp option
+ * @param length of dhcp option data
+ * @return upon sucess 0 else < 0.
+ * */
 int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
 {
   uint32_t offset = 0;
@@ -84,10 +135,10 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
         if(it == m_elemDefUMap.end()) {
 
           /*Not found in the MAP.*/
-          elm.m_tag = in[offset++];
-          elm.m_len = in[offset++];
-          memcpy(elm.m_val.data(), &in[offset], elm.m_len);
-          offset += elm.m_len;
+          elm.set_tag(in[offset++]);
+          elm.set_len(in[offset++]);
+          memcpy(elm.m_val.data(), &in[offset], elm.get_len());
+          offset += elm.get_len();
 
           /*Add it into MAP now.*/
           m_elemDefUMap.insert(std::pair<uint8_t, element_def_t>(tag, elm));
@@ -96,10 +147,10 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
 
           /*Found in the Map , Update with new contents received now.*/
           elm = it->second;
-          elm.m_tag = in[offset++];
-          elm.m_len = in[offset++];
-          memcpy(elm.m_val.data(), &in[offset], elm.m_len);
-          offset += elm.m_len;
+          elm.set_tag(in[offset++]);
+          elm.set_len(in[offset++]);
+          memcpy(elm.m_val.data(), &in[offset], elm.get_len());
+          offset += elm.get_len();
 
         }
     }
@@ -107,25 +158,30 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
   return(0);
 }
 
+/**
+ * @brief This member function gets dhcp packet and parses DHCP Option
+ *        and stores them into unordered_map and then feed the request
+ *        to FSM for further processing.
+ * @param dhcp packet
+ * @param length of dhcp packet
+ * @return upon success 0 else < 0.
+ * */
 int32_t mna::dhcp::dhcpEntry::rx(const char* in, uint32_t inLen)
 {
-  uint8_t *opt = (uint8_t *)&in[sizeof(mna::dhcp::dhcp_t)];
 
-  parseOptions(opt, (inLen - sizeof(mna::dhcp::dhcp_t)));
+  mna::dhcp::dhcp_t *req = (mna::dhcp::dhcp_t* )in;
+  size_t cookie_len = 4;
+  uint8_t *opt = (uint8_t *)&in[sizeof(mna::dhcp::dhcp_t) + cookie_len];
 
-  /** Kick the state machine now. */
+  parseOptions(opt, (inLen - (sizeof(mna::dhcp::dhcp_t) + cookie_len)));
+
+  m_xid = req->xid;
+  memcpy(m_chaddr.data(), req->chaddr, 6);
+
   std::cout << "3.dhcpEntry::rx is invoked " << std::endl;
-  int32_t ret = getState().rx(this, in, inLen);
-  /* move FSM into next State now.*/
-  switch (ret) {
-    case REQUEST:
-      std::cout << "OnRequest State is set " << std::endl;
-      /* Initializing the State Machine. */
-      setState<OnRequest>(m_instRequest);
-    break;
-  }
+  /** Feed to FSM now to process respective request. */
+  return(getState().rx(this, in, inLen));
 
-  return(0);
 }
 
 

@@ -180,7 +180,8 @@ namespace mna {
       DECLINE = 4,
       ACK = 5,
       NACK = 6,
-      RELEASE = 7
+      RELEASE = 7,
+      INFORM = 8
     };
 
     enum option_t : uint8_t {
@@ -377,6 +378,8 @@ namespace mna {
 
     class dhcpEntry {
       public:
+        /** This UMap stores DHCP Option received in DISCOVER/REQUEST. */
+        element_def_UMap_t m_elemDefUMap;
 
         dhcpEntry(const dhcpEntry& fsm) = default;
         dhcpEntry(dhcpEntry&& fsm) = default;
@@ -449,10 +452,11 @@ namespace mna {
 
         OnLeaseExpire& instLeaseExpire();
         int32_t parseOptions(const uint8_t* in, uint32_t inLen);
+        int32_t buildAndSendOffer(const uint8_t* in, uint32_t inLen);
+        int32_t buildAndSendAck(const uint8_t* in, uint32_t inLen);
+        int32_t tx(uint8_t* out, uint32_t outLen);
 
       private:
-        /** This UMap stores DHCP Option received in DISCOVER/REQUEST. */
-        element_def_UMap_t m_elemDefUMap;
 
         /* Per DHCP Client State Machine. */
         FSM* m_fsm;
@@ -483,8 +487,6 @@ namespace mna {
         std::array<char, 6> m_chaddr;
         /* The Domain Name to be assigned to DHCP Client. */
         std::string m_domainName;
-        /** DHCP Optional Parameters. */
-        element_def_t m_dhcpParam;
     };
 
 
