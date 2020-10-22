@@ -23,15 +23,21 @@ namespace mna {
     SIZE_1MB = (SIZE_1KB * SIZE_1KB),
     ETH_ALEN = 6,
     ETH_P_ALL = 0x0003,
-    //TCP_NODELAY = 1,
-    //PACKET_MR_PROMISC = 1,
-    //PACKET_ADD_MEMBERSHIP = 1
   };
 
   class middleware : public ACE_Event_Handler {
     public:
 
+      /** This ctor is invoked when instantiated with non-const string.*/
       middleware(std::string& intf)
+      {
+        m_mb = nullptr;
+        m_intf = std::move(intf);
+        m_handle = open_and_bind_intf();
+      }
+
+      /** This ctor will be invoked when instantiated with const string.*/
+      middleware(std::string&& intf)
       {
         m_mb = nullptr;
         m_intf = intf;
