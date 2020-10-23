@@ -3,7 +3,7 @@
 
 #include "protocol.h"
 
-int32_t mna::dhcp::OnDiscover::receive(void* parent, const char* inPtr, uint32_t inLen)
+int32_t mna::dhcp::OnDiscover::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
 {
   std::cout << "6.OnDiscover::receive ---> " << inPtr << "inLen " << inLen << std::endl;
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
@@ -18,7 +18,8 @@ int32_t mna::dhcp::OnDiscover::receive(void* parent, const char* inPtr, uint32_t
     switch(std::get<0>(elm.get_val())) {
 
       case mna::dhcp::DISCOVER:
-        dEnt->buildAndSendOffer((const uint8_t* )inPtr, inLen);
+        std::cout << " message type DISCOVER " << std::endl;
+        dEnt->buildAndSendOffer(inPtr, inLen);
         break;
 
       case mna::dhcp::REQUEST:
@@ -62,7 +63,7 @@ void mna::dhcp::OnRequest::onExit()
   std::cout << "5.OnRequest::onExit is invoked " << std::endl;
 }
 
-int32_t mna::dhcp::OnRequest::receive(void* parent, const char* inPtr, uint32_t inLen)
+int32_t mna::dhcp::OnRequest::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
 {
   std::cout << "OnRequest::receive ---> " << inPtr << "inLen " << inLen << std::endl;
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
@@ -81,7 +82,7 @@ void mna::dhcp::OnRelease::onExit()
   std::cout << "5.OnRelease::onExit is invoked " << std::endl;
 }
 
-int32_t mna::dhcp::OnRelease::receive(void* parent, const char* inPtr, uint32_t inLen)
+int32_t mna::dhcp::OnRelease::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
 {
   std::cout << "Onrelease::receive ---> " << inPtr << "inLen " << inLen << std::endl;
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
@@ -132,18 +133,7 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
         element_def_UMap_t::const_iterator it;
         it = m_elemDefUMap.find(tag);
 
-        if(it == m_elemDefUMap.end()) {
-
-          /*Not found in the MAP.*/
-          elm.set_tag(in[offset++]);
-          elm.set_len(in[offset++]);
-          memcpy(elm.m_val.data(), &in[offset], elm.get_len());
-          offset += elm.get_len();
-
-          /*Add it into MAP now.*/
-          m_elemDefUMap.insert(std::pair<uint8_t, element_def_t>(tag, elm));
-
-        } else {
+        if(it != m_elemDefUMap.end()) {
 
           /*Found in the Map , Update with new contents received now.*/
           elm = it->second;
@@ -151,6 +141,16 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
           elm.set_len(in[offset++]);
           memcpy(elm.m_val.data(), &in[offset], elm.get_len());
           offset += elm.get_len();
+
+        } else {
+
+          /*Not found in the MAP.*/
+          elm.set_tag(in[offset++]);
+          elm.set_len(in[offset++]);
+          memcpy(elm.m_val.data(), &in[offset], elm.get_len());
+          offset += elm.get_len();
+          /*Add it into MAP now.*/
+          m_elemDefUMap.insert(std::pair<uint8_t, element_def_t>(tag, elm));
 
         }
     }
@@ -166,7 +166,7 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
  * @param length of dhcp packet
  * @return upon success 0 else < 0.
  * */
-int32_t mna::dhcp::dhcpEntry::rx(const char* in, uint32_t inLen)
+int32_t mna::dhcp::dhcpEntry::rx(const uint8_t* in, uint32_t inLen)
 {
 
   mna::dhcp::dhcp_t *req = (mna::dhcp::dhcp_t* )in;
@@ -185,7 +185,7 @@ int32_t mna::dhcp::dhcpEntry::rx(const char* in, uint32_t inLen)
 }
 
 
-int32_t mna::dhcp::server::rx(const char* in, uint32_t inLen)
+int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 {
   std::cout << "1.server::rx received REQ " <<std::endl;
   dhcp_entry_onMAC_t::const_iterator it;

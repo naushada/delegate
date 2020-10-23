@@ -35,7 +35,7 @@ ACE_INT32 mna::middleware::handle_input(ACE_HANDLE handle)
     mb->wr_ptr(recv_len);
 
     /* dispatch the packet to upstream */
-    m_instEth.rx(mb->rd_ptr(), mb->length());
+    m_instEth.rx(reinterpret_cast<uint8_t*>(mb->rd_ptr()), mb->length());
 
   }while(0);
 
