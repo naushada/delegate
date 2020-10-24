@@ -40,7 +40,12 @@ namespace mna {
         return(*this);
       }
 
-      ~FSM() = default;
+      ~FSM()
+      {
+        on_receive.reset();
+        on_exit.reset();
+        on_entry.reset();
+      }
 
       /**
        * @brief This member function is used to set the State in FSM. This member function accepts the instance of a class
@@ -408,8 +413,8 @@ namespace mna {
 
         ~dhcpEntry()
         {
-          //delete m_fsm;
-          //m_fsm = nullptr;
+          delete m_fsm;
+          m_fsm = nullptr;
         }
 
 
@@ -507,7 +512,7 @@ namespace mna {
     };
 
 
-    using dhcp_entry_onMAC_t = std::unordered_map<std::string, dhcpEntry>;
+    using dhcp_entry_onMAC_t = std::unordered_map<std::string, dhcpEntry*>;
     using dhcp_entry_onIP_t = std::unordered_map<uint32_t, dhcpEntry>;
 
     class server {
@@ -521,6 +526,15 @@ namespace mna {
         server() = default;
         server(const server& ) = default;
         server(server&& ) = default;
+
+        ~server()
+        {
+          dhcp_entry_onMAC_t::const_iterator it;
+          for(it = m_dhcpUmapOnMAC.begin(); it != m_dhcpUmapOnMAC.end(); ++it) {
+            dhcpEntry *dEnt = it->second;
+            delete dEnt;
+          }
+        }
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
 

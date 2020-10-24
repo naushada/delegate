@@ -134,7 +134,7 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
         it = m_elemDefUMap.find(tag);
 
         if(it != m_elemDefUMap.end()) {
-
+          std::cout << "elem found in the map" << std::endl;
           /*Found in the Map , Update with new contents received now.*/
           elm = it->second;
           elm.set_tag(in[offset++]);
@@ -144,6 +144,7 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
 
         } else {
 
+          std::cout << "elem not found in the map" << std::endl;
           /*Not found in the MAP.*/
           elm.set_tag(in[offset++]);
           elm.set_len(in[offset++]);
@@ -201,23 +202,23 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 
     std::cout << "2.dhcpEntry Instance is found " << std::endl;
     /* DHCP Client Entry is found. */
-    dhcpEntry dEnt = it->second;
+    dhcpEntry *dEnt = it->second;
     /* Feed to FSM now. */
-    dEnt.rx(in, inLen);
+    dEnt->rx(in, inLen);
 
   } else {
 
     std::cout << "2.dhcpEntry instantiated " << std::endl;
     /* New DHCP Client Request, create an entry for it. */
-    dhcpEntry dEnt(123, m_routerIP, m_dnsIP, m_lease, m_mtu, m_serverID, m_domainName);
+    dhcpEntry *dEnt = new dhcpEntry(123, m_routerIP, m_dnsIP, m_lease, m_mtu, m_serverID, m_domainName);
 
-    bool ret = m_dhcpUmapOnMAC.insert(std::pair<std::string, dhcpEntry>(MAC, dEnt)).second;
+    bool ret = m_dhcpUmapOnMAC.insert(std::pair<std::string, dhcpEntry*>(MAC, dEnt)).second;
 
     if(!ret) {
       std::cout << "Insertion of dhcpEntry failed " << std::endl;
     }
 
-    dEnt.rx(in, inLen);
+    dEnt->rx(in, inLen);
   }
 
   return(0);
