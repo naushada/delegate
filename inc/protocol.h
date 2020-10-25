@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cstring>
+#include <arpa/inet.h>
 
 namespace mna {
 
@@ -424,20 +425,18 @@ namespace mna {
 
         dhcpEntry()
         {
-          m_fsm = new FSM;
+          m_fsm = std::unique_ptr<FSM>(new FSM);
         }
 
         ~dhcpEntry()
         {
-          delete m_fsm;
-          m_fsm = nullptr;
         }
 
 
         dhcpEntry(uint32_t clientIP, uint32_t routerIP, uint32_t dnsIP,
                   uint32_t lease, uint32_t mtu, uint32_t serverID, std::string domainName)
         {
-          m_fsm = new FSM;
+          m_fsm = std::unique_ptr<FSM>(new FSM);
           std::swap(m_clientIP, clientIP);
           std::swap(m_routerIP, routerIP);
           std::swap(m_dnsIP, dnsIP);
@@ -464,14 +463,13 @@ namespace mna {
         int32_t rx(const uint8_t* in, uint32_t inLen);
 
         int32_t parseOptions(const uint8_t* in, uint32_t inLen);
-        int32_t buildAndSendOffer(const uint8_t* in, uint32_t inLen);
-        int32_t buildAndSendAck(const uint8_t* in, uint32_t inLen);
+        int32_t buildAndSendResponse(const uint8_t* in, uint32_t inLen);
         int32_t tx(uint8_t* out, uint32_t outLen);
 
       private:
 
         /* Per DHCP Client State Machine. */
-        FSM* m_fsm;
+        std::unique_ptr<FSM> m_fsm;
 
         /* The IP address allocated/Offered to DHCP Client. */
         uint32_t m_clientIP;
@@ -491,8 +489,8 @@ namespace mna {
         std::array<char, 6> m_chaddr;
         /* The Domain Name to be assigned to DHCP Client. */
         std::string m_domainName;
+        std::string m_hostName;
     };
-
 
     using dhcp_entry_onMAC_t = std::unordered_map<std::string, dhcpEntry*>;
     using dhcp_entry_onIP_t = std::unordered_map<uint32_t, dhcpEntry>;
