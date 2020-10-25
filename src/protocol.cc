@@ -37,7 +37,7 @@ int32_t mna::dhcp::OnDiscover::receive(void* parent, const uint8_t* inPtr, uint3
   }
 
   /** move to Next State. */
-  dEnt->setState<OnRequest>(dEnt->instRequest());
+  dEnt->setState<OnRequest>(OnRequest::instance());
   /* Start Processing DHCP DISCOVER Request.*/
   return(0);
 }
@@ -67,7 +67,7 @@ int32_t mna::dhcp::OnRequest::receive(void* parent, const uint8_t* inPtr, uint32
 {
   std::cout << "OnRequest::receive ---> " << inPtr << "inLen " << inLen << std::endl;
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
-  dEnt->setState<OnRelease>(dEnt->instRelease());
+  dEnt->setState<OnRelease>(OnRelease::instance());
   /* Start Processing DHCP DISCOVER Request.*/
   return(RELEASE);
 }
@@ -86,7 +86,7 @@ int32_t mna::dhcp::OnRelease::receive(void* parent, const uint8_t* inPtr, uint32
 {
   std::cout << "Onrelease::receive ---> " << inPtr << "inLen " << inLen << std::endl;
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
-  dEnt->setState<OnDiscover>(dEnt->instDiscover());
+  dEnt->setState<OnDiscover>(OnDiscover::instance());
   /* Start Processing DHCP DISCOVER Request.*/
   return(RELEASE);
 }

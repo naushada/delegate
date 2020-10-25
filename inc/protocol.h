@@ -63,7 +63,7 @@ namespace mna {
           on_exit.reset();
           on_receive.reset();
           on_entry.reset();
-      }
+        }
 
         /* assigning the respective delegates */
         on_receive = receive_delegate_t::from<C, &C::receive>(inst);
@@ -101,7 +101,6 @@ namespace mna {
         receive_delegate_t on_receive;
         state_delegate_t on_entry;
         state_delegate_t on_exit;
-
   };
 
   namespace eth {
@@ -327,6 +326,12 @@ namespace mna {
          * @brief This is a delegate member function which is invoked from FSM Class.
          * */
         int32_t receive(void* parent, const uint8_t *inPtr, uint32_t inLen);
+
+        static OnDiscover& instance()
+        {
+          static OnDiscover m_instance;
+          return(m_instance);
+        }
     };
 
     class OnRequest {
@@ -345,6 +350,12 @@ namespace mna {
          * @brief This is a delegate member function which is invoked from FSM Class.
          * */
         int32_t receive(void* parent, const uint8_t *inPtr, uint32_t inLen);
+
+        static OnRequest& instance()
+        {
+          static OnRequest m_instance;
+          return(m_instance);
+        }
     };
 
     class OnRelease {
@@ -364,6 +375,11 @@ namespace mna {
          * */
         int32_t receive(void* parent, const uint8_t *inPtr, uint32_t inLen);
 
+        static OnRelease& instance()
+        {
+          static OnRelease m_instance;
+          return(m_instance);
+        }
     };
 
     class OnInform {
@@ -408,7 +424,7 @@ namespace mna {
 
         dhcpEntry()
         {
-          m_fsm = nullptr;
+          m_fsm = new FSM;
         }
 
         ~dhcpEntry()
@@ -431,7 +447,7 @@ namespace mna {
           std::swap(m_domainName, domainName);
 
           /* Initializing the State Machine. */
-          setState<OnDiscover>(m_instDiscover);
+          setState<OnDiscover>(OnDiscover::instance());
         }
 
         FSM& getState() const
@@ -447,32 +463,6 @@ namespace mna {
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
 
-        OnDiscover& instDiscover()
-        {
-          return(m_instDiscover);
-        }
-
-        OnRequest& instRequest()
-        {
-          return(m_instRequest);
-        }
-
-        OnRelease& instRelease()
-        {
-          return(m_instRelease);
-        }
-
-        OnInform& instInform()
-        {
-          return(m_instInform);
-        }
-
-        OnDecline& instDecline()
-        {
-          return(m_instDecline);
-        }
-
-        OnLeaseExpire& instLeaseExpire();
         int32_t parseOptions(const uint8_t* in, uint32_t inLen);
         int32_t buildAndSendOffer(const uint8_t* in, uint32_t inLen);
         int32_t buildAndSendAck(const uint8_t* in, uint32_t inLen);
@@ -482,14 +472,6 @@ namespace mna {
 
         /* Per DHCP Client State Machine. */
         FSM* m_fsm;
-
-        /* Creating instance of */
-        OnDiscover m_instDiscover;
-        OnRequest m_instRequest;
-        OnRelease m_instRelease;
-        OnInform m_instInform;
-        OnDecline m_instDecline;
-        OnLeaseExpire m_instLeaseExpire;
 
         /* The IP address allocated/Offered to DHCP Client. */
         uint32_t m_clientIP;
