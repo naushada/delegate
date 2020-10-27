@@ -1,12 +1,13 @@
 #ifndef __PROTOCOL_CC__
 #define __PROTOCOL_CC__
 
+#include "middleware.h"
 #include "protocol.h"
 
 int32_t mna::dhcp::OnDiscover::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
 {
   std::cout << "6.OnDiscover::receive ---> " << inPtr << "inLen " << inLen << std::endl;
-  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
 
   mna::dhcp::element_def_UMap_t::const_iterator it;
   it = dEnt->m_elemDefUMap.find(mna::dhcp::MESSAGE_TYPE);
@@ -15,22 +16,27 @@ int32_t mna::dhcp::OnDiscover::receive(void* parent, const uint8_t* inPtr, uint3
 
     mna::dhcp::element_def_t elm = it->second;
 
+    dEnt->buildAndSendResponse(inPtr, inLen);
     switch(std::get<0>(elm.get_val())) {
 
       case mna::dhcp::DISCOVER:
-        std::cout << " message type DISCOVER " << std::endl;
-        dEnt->buildAndSendResponse(inPtr, inLen);
         /** move to Next State. */
         dEnt->setState<OnRequest>(OnRequest::instance());
         break;
 
       case mna::dhcp::REQUEST:
+        /** move to Next State. */
+        dEnt->setState<OnRelease>(OnRelease::instance());
         break;
 
       case mna::dhcp::RELEASE:
+        /** move to Next State. */
+        dEnt->setState<OnDiscover>(OnDiscover::instance());
         break;
 
       case mna::dhcp::INFORM:
+        /** move to Next State. */
+        dEnt->setState<OnInform>(OnInform::instance());
         break;
 
       default:
@@ -54,6 +60,7 @@ void mna::dhcp::OnDiscover::onExit()
 void mna::dhcp::OnRequest::onEntry()
 {
   std::cout << "5.OnRequest::onEntry is invoked " << std::endl;
+  //mna::middleware::instance()->start_timer(5, this);
 }
 
 void mna::dhcp::OnRequest::onExit()
@@ -64,8 +71,43 @@ void mna::dhcp::OnRequest::onExit()
 int32_t mna::dhcp::OnRequest::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
 {
   std::cout << "OnRequest::receive ---> " << inPtr << "inLen " << inLen << std::endl;
-  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
-  dEnt->setState<OnRelease>(OnRelease::instance());
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
+
+  mna::dhcp::element_def_UMap_t::const_iterator it;
+  it = dEnt->m_elemDefUMap.find(mna::dhcp::MESSAGE_TYPE);
+
+  if(it != dEnt->m_elemDefUMap.end()) {
+
+    mna::dhcp::element_def_t elm = it->second;
+    dEnt->buildAndSendResponse(inPtr, inLen);
+
+    switch(std::get<0>(elm.get_val())) {
+
+      case mna::dhcp::DISCOVER:
+        /** move to Next State. */
+        dEnt->setState<OnRequest>(OnRequest::instance());
+        break;
+
+      case mna::dhcp::REQUEST:
+        /** move to Next State. */
+        dEnt->setState<OnRelease>(OnRelease::instance());
+        break;
+
+      case mna::dhcp::RELEASE:
+        /** move to Next State. */
+        dEnt->setState<OnDiscover>(OnDiscover::instance());
+        break;
+
+      case mna::dhcp::INFORM:
+        /** move to Next State. */
+        dEnt->setState<OnInform>(OnInform::instance());
+        break;
+
+      default:
+        break;
+    }
+  }
+
   return(0);
 }
 
@@ -82,9 +124,106 @@ void mna::dhcp::OnRelease::onExit()
 int32_t mna::dhcp::OnRelease::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
 {
   std::cout << "Onrelease::receive ---> " << inPtr << "inLen " << inLen << std::endl;
-  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry *>(parent);
-  dEnt->setState<OnDiscover>(OnDiscover::instance());
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
+
+  mna::dhcp::element_def_UMap_t::const_iterator it;
+  it = dEnt->m_elemDefUMap.find(mna::dhcp::MESSAGE_TYPE);
+
+  if(it != dEnt->m_elemDefUMap.end()) {
+
+    mna::dhcp::element_def_t elm = it->second;
+    dEnt->buildAndSendResponse(inPtr, inLen);
+
+    switch(std::get<0>(elm.get_val())) {
+
+      case mna::dhcp::DISCOVER:
+        /** move to Next State. */
+        dEnt->setState<OnRequest>(OnRequest::instance());
+        break;
+
+      case mna::dhcp::REQUEST:
+        /** move to Next State. */
+        dEnt->setState<OnRelease>(OnRelease::instance());
+        break;
+
+      case mna::dhcp::RELEASE:
+        /** move to Next State. */
+        dEnt->setState<OnDiscover>(OnDiscover::instance());
+        break;
+
+      case mna::dhcp::INFORM:
+        /** move to Next State. */
+        dEnt->setState<OnInform>(OnInform::instance());
+        break;
+
+      default:
+        break;
+    }
+  }
+
   return(0);
+}
+
+void mna::dhcp::OnInform::onEntry()
+{
+  std::cout << "5.OnInform::onEntry is invoked " << std::endl;
+}
+
+void mna::dhcp::OnInform::onExit()
+{
+  std::cout << "5.OnInform::onExit is invoked " << std::endl;
+}
+
+int32_t mna::dhcp::OnInform::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
+{
+  std::cout << "OnInform::receive ---> " << inPtr << "inLen " << inLen << std::endl;
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
+
+  mna::dhcp::element_def_UMap_t::const_iterator it;
+  it = dEnt->m_elemDefUMap.find(mna::dhcp::MESSAGE_TYPE);
+
+  if(it != dEnt->m_elemDefUMap.end()) {
+
+    mna::dhcp::element_def_t elm = it->second;
+    dEnt->buildAndSendResponse(inPtr, inLen);
+
+    switch(std::get<0>(elm.get_val())) {
+
+      case mna::dhcp::DISCOVER:
+        /** move to Next State. */
+        dEnt->setState<OnRequest>(OnRequest::instance());
+        break;
+
+      case mna::dhcp::REQUEST:
+        /** move to Next State. */
+        dEnt->setState<OnRelease>(OnRelease::instance());
+        break;
+
+      case mna::dhcp::RELEASE:
+        /** move to Next State. */
+        dEnt->setState<OnDiscover>(OnDiscover::instance());
+        break;
+
+      case mna::dhcp::INFORM:
+        /** move to Next State. */
+        dEnt->setState<OnInform>(OnInform::instance());
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  return(0);
+}
+
+long mna::dhcp::dhcpEntry::startTimer(uint32_t delay, const void* txn)
+{
+  return(0);
+}
+
+void mna::dhcp::dhcpEntry::stopTimer(long tid)
+{
 }
 
 int32_t mna::dhcp::dhcpEntry::tx(uint8_t* out, uint32_t outLen)
@@ -101,6 +240,7 @@ int32_t mna::dhcp::dhcpEntry::tx(uint8_t* out, uint32_t outLen)
  * */
 int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t inLen)
 {
+  (void)inLen;
   uint32_t offset = 0;
   uint8_t rsp[1024];
 
@@ -363,21 +503,20 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
         it = m_elemDefUMap.find(tag);
 
         if(it != m_elemDefUMap.end()) {
-          std::cout << "elem found in the map" << std::endl;
+
           /*Found in the Map , Update with new contents received now.*/
           elm = it->second;
           elm.set_tag(in[offset++]);
           elm.set_len(in[offset++]);
-          memcpy(elm.m_val.data(), &in[offset], elm.get_len());
+          std::memcpy(elm.m_val.data(), &in[offset], elm.get_len());
           offset += elm.get_len();
 
         } else {
 
-          std::cout << "elem not found in the map" << std::endl;
           /*Not found in the MAP.*/
           elm.set_tag(in[offset++]);
           elm.set_len(in[offset++]);
-          memcpy(elm.m_val.data(), &in[offset], elm.get_len());
+          std::memcpy(elm.m_val.data(), &in[offset], elm.get_len());
           offset += elm.get_len();
           /*Add it into MAP now.*/
           m_elemDefUMap.insert(std::pair<uint8_t, element_def_t>(tag, elm));
@@ -406,9 +545,8 @@ int32_t mna::dhcp::dhcpEntry::rx(const uint8_t* in, uint32_t inLen)
   parseOptions(opt, (inLen - (sizeof(mna::dhcp::dhcp_t) + cookie_len)));
 
   m_xid = req->xid;
-  memcpy(m_chaddr.data(), req->chaddr, 6);
+  std::memcpy(m_chaddr.data(), req->chaddr, req->hlen);
 
-  std::cout << "3.dhcpEntry::rx is invoked " << std::endl;
   /** Feed to FSM now to process respective request. */
   return(getState().rx(this, in, inLen));
 
@@ -453,6 +591,20 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 
 }
 
+long mna::dhcp::server::timedOut(const void* txn)
+{
+  dhcp_entry_onMAC_t::const_iterator it;
+  const uint8_t *clientMAC = reinterpret_cast<const uint8_t *>(txn);
+  std::string MAC = std::string((const char *)clientMAC, 6);
+  it = m_dhcpUmapOnMAC.find(MAC);
+
+  if(it != m_dhcpUmapOnMAC.end()) {
+    mna::dhcp::dhcpEntry *dEnt = it->second;
+    delete dEnt;
+  }
+
+  return(0);
+}
 
 
 

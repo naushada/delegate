@@ -362,11 +362,10 @@ namespace mna {
     class OnRelease {
       public:
 
-      OnRelease() = default;
-      OnRelease(const OnRelease& ) = default;
-      OnRelease(OnRelease&& ) = default;
-
-      ~OnRelease() = default;
+        OnRelease() = default;
+        OnRelease(const OnRelease& ) = default;
+        OnRelease(OnRelease&& ) = default;
+        ~OnRelease() = default;
 
         void onEntry();
         void onExit();
@@ -384,6 +383,25 @@ namespace mna {
     };
 
     class OnInform {
+      public:
+        OnInform() = default;
+        OnInform(const OnInform& ) = default;
+        OnInform(OnInform&& ) = default;
+        ~OnInform() = default;
+
+        void onEntry();
+        void onExit();
+
+        /**
+         * @brief This is a delegate member function which is invoked from FSM Class.
+         * */
+        int32_t receive(void* parent, const uint8_t *inPtr, uint32_t inLen);
+
+        static OnInform& instance()
+        {
+          static OnInform m_instance;
+          return(m_instance);
+        }
     };
 
     class OnDecline {
@@ -391,6 +409,25 @@ namespace mna {
 
 
     class OnLeaseExpire {
+      public:
+        OnLeaseExpire() = default;
+        OnLeaseExpire(const OnLeaseExpire& ) = default;
+        OnLeaseExpire(OnLeaseExpire&& ) = default;
+        ~OnLeaseExpire() = default;
+
+        void onEntry();
+        void onExit();
+
+        /**
+         * @brief This is a delegate member function which is invoked from FSM Class.
+         * */
+        int32_t receive(void* parent, const uint8_t *inPtr, uint32_t inLen);
+
+        static OnLeaseExpire& instance()
+        {
+          static OnLeaseExpire m_instance;
+          return(m_instance);
+        }
     };
 
     typedef struct {
@@ -466,6 +503,10 @@ namespace mna {
         int32_t buildAndSendResponse(const uint8_t* in, uint32_t inLen);
         int32_t tx(uint8_t* out, uint32_t outLen);
 
+        /** Timer related API. */
+        long startTimer(uint32_t delay, const void* txn);
+        void stopTimer(long tid);
+
       private:
 
         /* Per DHCP Client State Machine. */
@@ -489,7 +530,10 @@ namespace mna {
         std::array<char, 6> m_chaddr;
         /* The Domain Name to be assigned to DHCP Client. */
         std::string m_domainName;
+        /* Name of Machine on which DHCP server is running. */
         std::string m_hostName;
+        /** The timer ID*/
+        long m_tid;
     };
 
     using dhcp_entry_onMAC_t = std::unordered_map<std::string, dhcpEntry*>;
@@ -517,6 +561,7 @@ namespace mna {
         }
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
+        long timedOut(const void* txn);
 
       private:
 

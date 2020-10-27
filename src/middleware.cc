@@ -4,6 +4,8 @@
 #include "middleware.h"
 #include "protocol.h"
 
+mna::middleware* mna::middleware::m_instance = nullptr;
+
 /*
  * @brief  This is the hook method for application to define this member function and is invoked by
  *         ACE Framework.
@@ -59,7 +61,7 @@ ACE_INT32 mna::middleware::handle_signal(int signum, siginfo_t *s, ucontext_t *u
   ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the signum is %u\n"), signum));
   //process_signal(signum);
 
-  return(0);
+ return(0);
 }
 
 
@@ -110,6 +112,15 @@ ACE_INT32 mna::middleware::process_timeout(const void *act)
 {
   /*! Derived class function should have been called.*/
   return(0);
+}
+
+mna::middleware* mna::middleware::instance()
+{
+  if(!m_instance) {
+    m_instance = new mna::middleware();
+  }
+
+  return(m_instance);
 }
 
 ACE_HANDLE mna::middleware::open_and_bind_intf()

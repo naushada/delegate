@@ -30,7 +30,7 @@ int main(int count, char* param[])
   s.rx(req, sizeof(req));
 
   mna::middleware mw("enp0s9");
-  ACE_Reactor::instance()->register_handler(&mw, ACE_Event_Handler::READ_MASK);
+  ACE_Reactor::instance()->register_handler(mna::middleware::instance(), ACE_Event_Handler::READ_MASK);
 
   loop_forever();
 

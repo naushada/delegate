@@ -70,8 +70,13 @@ namespace mna {
       ACE_HANDLE open_and_bind_intf();
 
       ACE_INT32 get_index();
+
+      static middleware* instance();
+
     private:
 
+      middleware() = default;
+      static middleware* m_instance;
       std::string m_intf;
       /*! socket fd */
       ACE_HANDLE m_handle;
