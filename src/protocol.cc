@@ -47,24 +47,28 @@ int32_t mna::dhcp::OnDiscover::receive(void* parent, const uint8_t* inPtr, uint3
   return(0);
 }
 
-void mna::dhcp::OnDiscover::onEntry()
+void mna::dhcp::OnDiscover::onEntry(void* parent)
 {
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnDiscover::onEntry is invoked " << std::endl;
 }
 
-void mna::dhcp::OnDiscover::onExit()
+void mna::dhcp::OnDiscover::onExit(void* parent)
 {
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnDiscover::onExit is invoked " << std::endl;
 }
 
-void mna::dhcp::OnRequest::onEntry()
+void mna::dhcp::OnRequest::onEntry(void* parent)
 {
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRequest::onEntry is invoked " << std::endl;
   //mna::middleware::instance()->start_timer(5, this);
 }
 
-void mna::dhcp::OnRequest::onExit()
+void mna::dhcp::OnRequest::onExit(void* parent)
 {
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRequest::onExit is invoked " << std::endl;
 }
 
@@ -111,13 +115,15 @@ int32_t mna::dhcp::OnRequest::receive(void* parent, const uint8_t* inPtr, uint32
   return(0);
 }
 
-void mna::dhcp::OnRelease::onEntry()
+void mna::dhcp::OnRelease::onEntry(void* parent)
 {
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRelease::onEntry is invoked " << std::endl;
 }
 
-void mna::dhcp::OnRelease::onExit()
+void mna::dhcp::OnRelease::onExit(void* parent)
 {
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRelease::onExit is invoked " << std::endl;
 }
 
@@ -164,13 +170,15 @@ int32_t mna::dhcp::OnRelease::receive(void* parent, const uint8_t* inPtr, uint32
   return(0);
 }
 
-void mna::dhcp::OnInform::onEntry()
+void mna::dhcp::OnInform::onEntry(void* parent)
 {
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnInform::onEntry is invoked " << std::endl;
 }
 
-void mna::dhcp::OnInform::onExit()
+void mna::dhcp::OnInform::onExit(void* parent)
 {
+  dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnInform::onExit is invoked " << std::endl;
 }
 
@@ -548,7 +556,7 @@ int32_t mna::dhcp::dhcpEntry::rx(const uint8_t* in, uint32_t inLen)
   std::memcpy(m_chaddr.data(), req->chaddr, req->hlen);
 
   /** Feed to FSM now to process respective request. */
-  return(getState().rx(this, in, inLen));
+  return(getState().rx(in, inLen));
 
 }
 
@@ -575,7 +583,7 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 
     std::cout << "2.dhcpEntry instantiated " << std::endl;
     /* New DHCP Client Request, create an entry for it. */
-    dEnt = new dhcpEntry(123, m_routerIP, m_dnsIP, m_lease, m_mtu, m_serverID, m_domainName);
+    dEnt = new dhcpEntry(this, 123, m_routerIP, m_dnsIP, m_lease, m_mtu, m_serverID, m_domainName);
 
     bool ret = m_dhcpUmapOnMAC.insert(std::pair<std::string, dhcpEntry*>(MAC, dEnt)).second;
 

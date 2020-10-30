@@ -10,7 +10,6 @@
 #include <arpa/inet.h>
 
 namespace mna {
-
   class FSM {
 
     public:
@@ -21,13 +20,14 @@ namespace mna {
        *          argument is the length of received request.
        * */
       using receive_delegate_t = delegate<int32_t (void* parent, const uint8_t*, uint32_t)>;
-      using state_delegate_t = delegate<void ()>;
+      using state_delegate_t = delegate<void (void* parent)>;
 
-      FSM()
+      FSM(void* parent)
       {
         on_receive.reset();
         on_exit.reset();
         on_entry.reset();
+        m_parent = parent;
       }
 
       FSM(const FSM& fsm) = default;
@@ -46,6 +46,7 @@ namespace mna {
         on_receive.reset();
         on_exit.reset();
         on_entry.reset();
+        m_parent = nullptr;
       }
 
       /**
@@ -60,7 +61,7 @@ namespace mna {
       {
         if(on_receive && on_exit) {
           /* invoking upon state exit */
-          on_exit();
+          on_exit(m_parent);
           on_exit.reset();
           on_receive.reset();
           on_entry.reset();
@@ -72,7 +73,7 @@ namespace mna {
         on_entry = state_delegate_t::from<C, &C::onEntry>(inst);
 
         /* invoking upon state entry */
-        on_entry();
+        on_entry(m_parent);
       }
 
       /**
@@ -93,15 +94,16 @@ namespace mna {
        * @param length of received length.
        * @return whatever deledagte returns.
        * */
-      int32_t rx(void* parent, const uint8_t* inPtr, uint32_t inLen) const
+      int32_t rx(const uint8_t* inPtr, uint32_t inLen) const
       {
-        return(on_receive(parent, inPtr, inLen));
+        return(on_receive(m_parent, inPtr, inLen));
       }
 
       private:
         receive_delegate_t on_receive;
         state_delegate_t on_entry;
         state_delegate_t on_exit;
+        void* m_parent;
   };
 
   namespace eth {
@@ -245,7 +247,6 @@ namespace mna {
 
       public:
 
-        //element_def_t() = default;
         ~element_def_t() = default;
 
         element_def_t()
@@ -261,7 +262,6 @@ namespace mna {
           set_tag(elm.get_tag());
           set_len(elm.get_len());
           set_val(elm.get_val());
-          std::cout << "copy ctor is called " << std::endl;
         }
 
         element_def_t(element_def_t&& elem) noexcept = default;
@@ -273,13 +273,12 @@ namespace mna {
           m_tag = elem.m_tag;
           m_len = elem.m_len;
           m_val = elem.m_val;
-          std::cout << "Assignment Operator is called " << std::endl;
           return *this;
         }
 
         /**
          * @brief by adding const qualifier ensures that this method does not
-         * modify the private data member.*/
+         * modify the private data member.This is a way to make this as pointer to const.*/
         const std::array<uint8_t, 255>& get_val() const
         {
           return(m_val);
@@ -311,6 +310,8 @@ namespace mna {
         }
     };
 
+    class server;
+    class dhcpEntry;
     class OnDiscover {
       public:
 
@@ -320,8 +321,8 @@ namespace mna {
 
         ~OnDiscover() = default;
 
-        void onEntry();
-        void onExit();
+        void onEntry(void* parent);
+        void onExit(void* parent);
 
         /**
          * @brief This is a delegate member function which is invoked from FSM Class.
@@ -330,6 +331,7 @@ namespace mna {
 
         static OnDiscover& instance()
         {
+          /* NB: static variable is instantiated only once.*/
           static OnDiscover m_instance;
           return(m_instance);
         }
@@ -344,8 +346,8 @@ namespace mna {
 
         ~OnRequest() = default;
 
-        void onEntry();
-        void onExit();
+        void onEntry(void* );
+        void onExit(void* );
 
         /**
          * @brief This is a delegate member function which is invoked from FSM Class.
@@ -367,8 +369,8 @@ namespace mna {
         OnRelease(OnRelease&& ) = default;
         ~OnRelease() = default;
 
-        void onEntry();
-        void onExit();
+        void onEntry(void* );
+        void onExit(void* );
 
         /**
          * @brief This is a delegate member function which is invoked from FSM Class.
@@ -389,8 +391,8 @@ namespace mna {
         OnInform(OnInform&& ) = default;
         ~OnInform() = default;
 
-        void onEntry();
-        void onExit();
+        void onEntry(void* );
+        void onExit(void* );
 
         /**
          * @brief This is a delegate member function which is invoked from FSM Class.
@@ -415,8 +417,8 @@ namespace mna {
         OnLeaseExpire(OnLeaseExpire&& ) = default;
         ~OnLeaseExpire() = default;
 
-        void onEntry();
-        void onExit();
+        void onEntry(void* );
+        void onExit(void* );
 
         /**
          * @brief This is a delegate member function which is invoked from FSM Class.
@@ -452,6 +454,7 @@ namespace mna {
 
     using element_def_UMap_t = std::unordered_map<uint8_t, element_def_t>;
 
+
     class dhcpEntry {
       public:
         /** This UMap stores DHCP Option received in DISCOVER/REQUEST. */
@@ -462,7 +465,7 @@ namespace mna {
 
         dhcpEntry()
         {
-          m_fsm = std::unique_ptr<FSM>(new FSM);
+          m_fsm = new FSM(this);
         }
 
         ~dhcpEntry()
@@ -470,10 +473,11 @@ namespace mna {
         }
 
 
-        dhcpEntry(uint32_t clientIP, uint32_t routerIP, uint32_t dnsIP,
+        dhcpEntry(server* parent, uint32_t clientIP, uint32_t routerIP, uint32_t dnsIP,
                   uint32_t lease, uint32_t mtu, uint32_t serverID, std::string domainName)
         {
-          m_fsm = std::unique_ptr<FSM>(new FSM);
+          m_fsm = new FSM(this);
+          m_parent = parent;
           std::swap(m_clientIP, clientIP);
           std::swap(m_routerIP, routerIP);
           std::swap(m_dnsIP, dnsIP);
@@ -510,8 +514,9 @@ namespace mna {
       private:
 
         /* Per DHCP Client State Machine. */
-        std::unique_ptr<FSM> m_fsm;
-
+        FSM* m_fsm;
+        /*backpointer to dhcp server.*/
+        server* m_parent;
         /* The IP address allocated/Offered to DHCP Client. */
         uint32_t m_clientIP;
         /* Unique transaction ID of message received. */
