@@ -75,6 +75,7 @@ ACE_INT32 mna::middleware::handle_signal(int signum, siginfo_t *s, ucontext_t *u
 ACE_HANDLE mna::middleware::handle_timeout(const ACE_Time_Value &tv, const void *arg)
 {
   ACE_TRACE(("mna::middleware::handle_timeout"));
+  ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l Timer is expired\n")));
   process_timeout(arg);
   return(0);
 }
@@ -153,7 +154,7 @@ ACE_HANDLE mna::middleware::open_and_bind_intf()
       break;
     }
 
-    ifr.ifr_flags |= IFF_PROMISC | IFF_NOARP;
+    ifr.ifr_flags |= (IFF_PROMISC | IFF_NOARP);
 
     if(ACE_OS::ioctl(handle, SIOCSIFFLAGS, &ifr) < 0)
     {

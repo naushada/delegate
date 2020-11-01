@@ -141,11 +141,16 @@ namespace mna {
         int32_t rx(const uint8_t* ethPacket, uint32_t packetLen)
         {
           std::cout << "eth::receive "<< std::endl;
-          return(upstream(ethPacket, packetLen));
+          return(m_upstream(ethPacket, packetLen));
         }
 
-        upstream_t upstream;
+        void set_upstream(upstream_t us)
+        {
+          m_upstream = us;
+        }
+
       private:
+        upstream_t m_upstream;
         std::string m_intf;
         uint32_t m_index;
     };
@@ -156,7 +161,7 @@ namespace mna {
     class ip {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
-        upstream_t upstream;
+
         ip() = default;
         ip(const ip& ) = default;
         ip(ip&& ) = default;
@@ -165,8 +170,16 @@ namespace mna {
         int32_t rx(const uint8_t* ip, uint32_t ipLen)
         {
           std::cout << "ip::receive "<< std::endl;
-          return(upstream(ip, ipLen));
+          return(m_upstream(ip, ipLen));
         }
+
+        void set_upstream(upstream_t us)
+        {
+          m_upstream = us;
+        }
+
+      private:
+        upstream_t m_upstream;
     };
 
   }
@@ -182,7 +195,7 @@ namespace mna {
     class udp {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
-        upstream_t upstream;
+
         udp() = default;
         udp(const udp& ) = default;
         udp(udp&& ) = default;
@@ -191,8 +204,16 @@ namespace mna {
         int32_t rx(const uint8_t* udp, uint32_t udpLen)
         {
           std::cout << "udp::receive "<< std::endl;
-          return(upstream(udp, udpLen));
+          return(m_upstream(udp, udpLen));
         }
+
+        void set_upstream(upstream_t us)
+        {
+          m_upstream = us;
+        }
+
+      private:
+        upstream_t m_upstream;
     };
 
     class tcp {
@@ -514,7 +535,7 @@ namespace mna {
           std::swap(m_domainName, domainName);
 
           /* Initializing the State Machine. */
-          setState<OnDiscover>(OnDiscover::instance());
+          setState(OnDiscover::instance());
         }
 
         FSM& getState() const
@@ -596,7 +617,6 @@ namespace mna {
       public:
         using upstream_t = delegate<int32_t (const uint8_t* in, uint32_t inLen)>;
 
-        upstream_t upstream;
         dhcp_entry_onMAC_t m_dhcpUmapOnMAC;
         dhcp_entry_onIP_t m_dhcpUmapOnIP;
 
@@ -615,9 +635,14 @@ namespace mna {
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
         long timedOut(const void* txn);
+        void set_upstream(upstream_t us)
+        {
+          m_upstream = us;
+        }
 
       private:
 
+        upstream_t m_upstream;
         /* The Router IP for DHCP Client. */
         uint32_t m_routerIP;
         /* The Domain Name Server IP. */
