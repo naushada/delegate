@@ -24,11 +24,19 @@ int main(int count, char* param[])
 
   mna::dhcp::dhcp_t* pReq = (mna::dhcp::dhcp_t *)req;
 
-  mna::dhcp::server s;
+  mna::dhcp::server _s;
+  mna::transport::udp _udp;
+  mna::ipv4::ip _ip;
+  mna::eth::ether _et("enp0s9");
 
-  s.rx(req, sizeof(req));
-  s.rx(req, sizeof(req));
+  _et.upstream = mna::ipv4::ip::upstream_t::from(_ip, &mna::ipv4::ip::rx);
+  _ip.upstream = mna::transport::udp::upstream_t::from(_udp, &mna::transport::udp::rx);
+  _udp.upstream = mna::dhcp::server::upstream_t::from(_s, &mna::dhcp::server::rx);
 
+  //s.rx(req, sizeof(req));
+  //s.rx(req, sizeof(req));
+
+  _et.rx(req, sizeof(req));
   mna::middleware mw("enp0s9");
   ACE_Reactor::instance()->register_handler(mna::middleware::instance(), ACE_Event_Handler::READ_MASK);
 

@@ -62,14 +62,15 @@ void mna::dhcp::OnDiscover::onExit(void* parent)
 void mna::dhcp::OnRequest::onEntry(void* parent)
 {
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
-  std::cout << "5.OnRequest::onEntry is invoked " << std::endl;
-  //mna::middleware::instance()->start_timer(5, this);
+  std::cout << "5.OnRequest::onEntry is invoked & Timer is started" << std::endl;
+  dEnt->set_tid(dEnt->startTimer(dEnt->get_lease(), (const void* )dEnt->get_chaddr().data()));
 }
 
 void mna::dhcp::OnRequest::onExit(void* parent)
 {
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRequest::onExit is invoked " << std::endl;
+  dEnt->stopTimer(dEnt->get_tid());
 }
 
 int32_t mna::dhcp::OnRequest::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
@@ -227,11 +228,13 @@ int32_t mna::dhcp::OnInform::receive(void* parent, const uint8_t* inPtr, uint32_
 
 long mna::dhcp::dhcpEntry::startTimer(uint32_t delay, const void* txn)
 {
-  return(0);
+  long tid = mna::middleware::instance()->start_timer(delay, txn);
+  return(tid);
 }
 
 void mna::dhcp::dhcpEntry::stopTimer(long tid)
 {
+  mna::middleware::instance()->stop_timer(tid);
 }
 
 int32_t mna::dhcp::dhcpEntry::tx(uint8_t* out, uint32_t outLen)

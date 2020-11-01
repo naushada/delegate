@@ -130,7 +130,7 @@ namespace mna {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
 
-        ether(std::string& intf) : m_intf(intf)
+        ether(const std::string& intf) : m_intf(intf)
         {
         }
 
@@ -140,11 +140,12 @@ namespace mna {
 
         int32_t rx(const uint8_t* ethPacket, uint32_t packetLen)
         {
+          std::cout << "eth::receive "<< std::endl;
           return(upstream(ethPacket, packetLen));
         }
 
-      private:
         upstream_t upstream;
+      private:
         std::string m_intf;
         uint32_t m_index;
     };
@@ -153,6 +154,19 @@ namespace mna {
 
   namespace ipv4 {
     class ip {
+      public:
+        using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        upstream_t upstream;
+        ip() = default;
+        ip(const ip& ) = default;
+        ip(ip&& ) = default;
+        ~ip() = default;
+
+        int32_t rx(const uint8_t* ip, uint32_t ipLen)
+        {
+          std::cout << "ip::receive "<< std::endl;
+          return(upstream(ip, ipLen));
+        }
     };
 
   }
@@ -166,6 +180,19 @@ namespace mna {
   namespace transport {
 
     class udp {
+      public:
+        using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        upstream_t upstream;
+        udp() = default;
+        udp(const udp& ) = default;
+        udp(udp&& ) = default;
+        ~udp() = default;
+
+        int32_t rx(const uint8_t* udp, uint32_t udpLen)
+        {
+          std::cout << "udp::receive "<< std::endl;
+          return(upstream(udp, udpLen));
+        }
     };
 
     class tcp {
@@ -511,6 +538,26 @@ namespace mna {
         long startTimer(uint32_t delay, const void* txn);
         void stopTimer(long tid);
 
+        uint32_t get_lease() const
+        {
+          return(m_lease);
+        }
+
+        std::array<uint8_t, 6> get_chaddr() const
+        {
+          return(m_chaddr);
+        }
+
+        long get_tid() const
+        {
+          return(m_tid);
+        }
+
+        void set_tid(long tid)
+        {
+          m_tid = tid;
+        }
+
       private:
 
         /* Per DHCP Client State Machine. */
@@ -532,7 +579,7 @@ namespace mna {
         /* The DHCP Server Identifier - Which is IP Address. */
         uint32_t m_serverID;
         /* The DHCP Client MAC Address. */
-        std::array<char, 6> m_chaddr;
+        std::array<uint8_t, 6> m_chaddr;
         /* The Domain Name to be assigned to DHCP Client. */
         std::string m_domainName;
         /* Name of Machine on which DHCP server is running. */
@@ -547,8 +594,9 @@ namespace mna {
     class server {
 
       public:
-        using upstream_delegate_t = delegate<int32_t (const uint8_t* in, uint32_t inLen)>;
+        using upstream_t = delegate<int32_t (const uint8_t* in, uint32_t inLen)>;
 
+        upstream_t upstream;
         dhcp_entry_onMAC_t m_dhcpUmapOnMAC;
         dhcp_entry_onIP_t m_dhcpUmapOnIP;
 
@@ -570,7 +618,6 @@ namespace mna {
 
       private:
 
-        upstream_delegate_t upstream;
         /* The Router IP for DHCP Client. */
         uint32_t m_routerIP;
         /* The Domain Name Server IP. */
