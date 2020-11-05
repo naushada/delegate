@@ -149,6 +149,11 @@ namespace mna {
           m_upstream = us;
         }
 
+        upstream_t& get_upstream()
+        {
+          return(m_upstream);
+        }
+
       private:
         upstream_t m_upstream;
         std::string m_intf;

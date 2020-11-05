@@ -40,6 +40,8 @@ int main(int count, char* param[])
   _et.rx(req, sizeof(req));
 
   mna::middleware mw("enp0s9");
+  mw.set_rx_dispatch(_et.get_upstream());
+  mw.set_timer_dispatch(mna::middleware::timer_delegate_t::from(_s, &mna::dhcp::server::timedOut));
   ACE_Reactor::instance()->register_handler(mna::middleware::instance(), ACE_Event_Handler::READ_MASK);
 
   loop_forever();

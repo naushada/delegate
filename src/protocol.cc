@@ -609,6 +609,7 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 
 long mna::dhcp::server::timedOut(const void* txn)
 {
+  std::cout << "timedOut is invoked " << std::endl;
   dhcp_entry_onMAC_t::const_iterator it;
   const uint8_t *clientMAC = reinterpret_cast<const uint8_t *>(txn);
   std::string MAC = std::string((const char *)clientMAC, 6);

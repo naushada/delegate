@@ -16,6 +16,8 @@
 #include "ace/INET_Addr.h"
 #include "ace/Message_Block.h"
 
+#include "delegate.hpp"
+
 namespace mna {
 
   enum common_t : uint32_t {
@@ -27,12 +29,17 @@ namespace mna {
 
   class middleware : public ACE_Event_Handler {
     public:
+      using timer_delegate_t = delegate<long (const void*)>;
+      using upstream_delegate_t = delegate<int32_t (const uint8_t*, uint32_t)>;
 
       /** This ctor is invoked when instantiated with non-const string.*/
       middleware(std::string& intf)
       {
         m_mb = nullptr;
         m_intf = std::move(intf);
+        m_to_dispatch.reset();
+        m_rx_dispatch.reset();
+        m_tid = 0;
         m_handle = open_and_bind_intf();
       }
 
@@ -41,6 +48,9 @@ namespace mna {
       {
         m_mb = nullptr;
         m_intf = intf;
+        m_to_dispatch.reset();
+        m_rx_dispatch.reset();
+        m_tid = 0;
         m_handle = open_and_bind_intf();
       }
 
@@ -61,7 +71,7 @@ namespace mna {
       void stop_timer(long timerId);
       void reset_timer(long tId, ACE_UINT32 timeOutInSec);
 
-      ACE_INT32 process_timeout(const void *act);
+      long process_timeout(const void *act);
       /*
        * @brief This member function opens the ethernet interface and bind to this ethernet interface.
        * @param none
@@ -72,6 +82,29 @@ namespace mna {
       ACE_INT32 get_index();
 
       static middleware* instance();
+
+      void set_timer_dispatch(timer_delegate_t tmr)
+      {
+        m_to_dispatch = tmr;
+      }
+
+      timer_delegate_t& get_timer_dispatch()
+      {
+        return(m_to_dispatch);
+      }
+
+      upstream_delegate_t& get_rx_dispatch()
+      {
+        return(m_rx_dispatch);
+      }
+
+      void set_rx_dispatch(upstream_delegate_t& rx)
+      {
+        m_rx_dispatch = rx;
+      }
+
+      int32_t rx(const uint8_t*, uint32_t);
+      int32_t tx(const uint8_t*, uint32_t);
 
     private:
 
@@ -84,8 +117,12 @@ namespace mna {
       ACE_SOCK_Dgram m_sock_dgram;
       ACE_Message_Block *m_mb;
 
-      /*! runnining number for timerID*/
+      /* upstream interface to */
+      upstream_delegate_t m_rx_dispatch;
+      /*! runnining number for timerID */
       long m_tid;
+      /* Timeout Delegate Handler */
+      timer_delegate_t m_to_dispatch;
   };
 }
 

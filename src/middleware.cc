@@ -20,13 +20,11 @@ ACE_INT32 mna::middleware::handle_input(ACE_HANDLE handle)
 
   ACE_NEW_RETURN(mb, ACE_Message_Block(mna::SIZE_1MB), -1);
 
-  mna::eth::ether m_instEth(m_intf);
-
   do
   {
     ACE_OS::memset((void *)mb->wr_ptr(), 0, mna::SIZE_1MB);
 
-    if((recv_len = m_sock_dgram.recv(mb->wr_ptr(), mna::SIZE_1MB, peer)) < 0)
+    if(!(recv_len = m_sock_dgram.recv(mb->wr_ptr(), mna::SIZE_1MB, peer)))
     {
       ACE_ERROR((LM_ERROR, "Receive from peer 0x%X Failed\n", peer.get_port_number()));
       break;
@@ -36,9 +34,11 @@ ACE_INT32 mna::middleware::handle_input(ACE_HANDLE handle)
     /*Update the length now.*/
     mb->wr_ptr(recv_len);
 
-    /* dispatch the packet to upstream */
-    m_instEth.rx(reinterpret_cast<uint8_t*>(mb->rd_ptr()), mb->length());
+    /* dispatch packet to the upstream */
+    rx(reinterpret_cast<uint8_t*>(mb->rd_ptr()), (uint32_t)mb->length());
 
+    /* Reclaim the heap memory now.*/
+    mb->release();
   }while(0);
 
   return(0);
@@ -63,7 +63,6 @@ ACE_INT32 mna::middleware::handle_signal(int signum, siginfo_t *s, ucontext_t *u
 
  return(0);
 }
-
 
 /*
  * @brief  This is the hook method for application to process the timer expiry. This is invoked by
@@ -109,9 +108,10 @@ void mna::middleware::stop_timer(long tId)
   ACE_Reactor::instance()->cancel_timer(tId);
 }
 
-ACE_INT32 mna::middleware::process_timeout(const void *act)
+long mna::middleware::process_timeout(const void *act)
 {
-  /*! Derived class function should have been called.*/
+  std::cout << "process_timeout is invoked " << std::endl;
+  get_timer_dispatch()(act);
   return(0);
 }
 
@@ -229,4 +229,14 @@ ACE_INT32 mna::middleware::get_index()
   return(retStatus);
 }
 
+int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
+{
+  get_rx_dispatch()(in, (uint32_t)inLen);
+  return(0);
+}
+
+int32_t mna::middleware::tx(const uint8_t* in, uint32_t inLen)
+{
+  return(0);
+}
 #endif /*__MIDDLEWARE_CC__*/
