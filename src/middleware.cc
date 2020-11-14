@@ -39,6 +39,7 @@ ACE_INT32 mna::middleware::handle_input(ACE_HANDLE handle)
 
     /* Reclaim the heap memory now.*/
     mb->release();
+
   }while(0);
 
   return(0);
@@ -124,6 +125,12 @@ mna::middleware* mna::middleware::instance()
   return(m_instance);
 }
 
+/**
+ * @brief this member method opens the ethernet interface and configures it to receive bcast packet,
+ *        with complete ethernet packet.
+ * @param none
+ * @return upon success handle else < 0.
+ * */
 ACE_HANDLE mna::middleware::open_and_bind_intf()
 {
   ACE_HANDLE handle = -1;
@@ -191,7 +198,11 @@ ACE_HANDLE mna::middleware::open_and_bind_intf()
   return(handle);
 }
 
-
+/**
+ * @brief This member method retrieves the eth device index based on eth device name.
+ * @param none
+ * @return upon success eth index else < 0.
+ * */
 ACE_INT32 mna::middleware::get_index()
 {
   ACE_HANDLE handle = -1;
@@ -229,14 +240,55 @@ ACE_INT32 mna::middleware::get_index()
   return(retStatus);
 }
 
+/**
+ * @brief This is the main entry point to protocol interface, the ethernet packet is
+ *        passed to ethernet handler with help of delegate.
+ * @param pointer to const ethernet packet.
+ * @param length of ethernet packet.
+ * @return 0 upon success else < 0.
+ * */
 int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
 {
-  get_rx_dispatch()(in, (uint32_t)inLen);
+  /*Identify the packet type and connect the object of protocol layer by using delegate*/
+  mna::eth::ETH* pEth = (mna::eth::ETH* )in;
+
+  do {
+
+    if(!pEth) {
+      std::cout << "Pointer to Ethernet Packet is null" << std::endl;
+      break;
+    }
+
+    switch(ntohs(pEth->proto)) {
+
+      case mna::eth::IPv4:
+        eth().set_upstream(mna::ipv4::ip::upstream_t::from(ip(), &mna::ipv4::ip::rx));
+        ip().set_upstream(mna::transport::udp::upstream_t::from(udp(), &mna::transport::udp::rx));
+        udp().set_upstream(mna::dhcp::server::upstream_t::from(dhcp(), &mna::dhcp::server::rx));
+        eth().rx(in, inLen);
+        //processIPv4Packets(in, inLen);
+        break;
+      case mna::eth::IPv6:
+        break;
+      case mna::eth::ARP:
+        break;
+      case mna::eth::EAPOL:
+        break;
+      case mna::eth::PPP:
+        break;
+      default:
+        break;
+    }
+
+  } while(0);
+
   return(0);
 }
 
-int32_t mna::middleware::tx(const uint8_t* in, uint32_t inLen)
+int32_t mna::middleware::tx(uint8_t* out, uint32_t inLen)
 {
   return(0);
 }
+
+
 #endif /*__MIDDLEWARE_CC__*/

@@ -132,17 +132,15 @@ namespace mna {
 
         ether(const std::string& intf) : m_intf(intf)
         {
+          m_src_mac.fill(0);
+          m_dst_mac.fill(0);
         }
 
         ether(const ether& ) = default;
         ether(ether&& ) = default;
         ~ether() = default;
 
-        int32_t rx(const uint8_t* ethPacket, uint32_t packetLen)
-        {
-          std::cout << "eth::receive "<< std::endl;
-          return(m_upstream(ethPacket, packetLen));
-        }
+        int32_t rx(const uint8_t* ethPacket, uint32_t packetLen);
 
         void set_upstream(upstream_t us)
         {
@@ -154,15 +152,65 @@ namespace mna {
           return(m_upstream);
         }
 
+        void src_mac(std::array<uint8_t, 6> smac)
+        {
+          m_src_mac = smac;
+        }
+
+        std::array<uint8_t, 6>& src_mac()
+        {
+          return(m_src_mac);
+        }
+
+        void dst_mac(std::array<uint8_t, 6> dmac)
+        {
+          m_dst_mac = dmac;
+        }
+
+        std::array<uint8_t, 6>& dst_mac()
+        {
+          return(m_dst_mac);
+        }
+
+        void index(uint32_t idx)
+        {
+          m_index = idx;
+        }
+
+        uint32_t index()
+        {
+          return(m_index);
+        }
+
       private:
         upstream_t m_upstream;
         std::string m_intf;
         uint32_t m_index;
+        std::array<uint8_t, 6> m_src_mac;
+        std::array<uint8_t, 6> m_dst_mac;
     };
 
   }
 
   namespace ipv4 {
+
+    typedef struct IP {
+      uint32_t len:4;
+      uint32_t ver:4;
+      uint32_t tos:8;
+      uint32_t tot_len:16;
+
+      uint16_t id;
+      uint16_t flags;
+
+      uint32_t ttl:8;
+      uint32_t proto:8;
+      uint32_t chksum:16;
+
+      uint32_t src_ip;
+      uint32_t dest_ip;
+    }__attribute__((packed))IP;
+
     class ip {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
@@ -172,19 +220,37 @@ namespace mna {
         ip(ip&& ) = default;
         ~ip() = default;
 
-        int32_t rx(const uint8_t* ip, uint32_t ipLen)
-        {
-          std::cout << "ip::receive "<< std::endl;
-          return(m_upstream(ip, ipLen));
-        }
+        int32_t rx(const uint8_t* ip, uint32_t ipLen);
 
         void set_upstream(upstream_t us)
         {
           m_upstream = us;
         }
 
+        void src_ip(uint32_t sip)
+        {
+          m_src_ip = sip;
+        }
+
+        uint32_t src_ip()
+        {
+          return(m_src_ip);
+        }
+
+        void dst_ip(uint32_t dip)
+        {
+          m_dst_ip = dip;
+        }
+
+        uint32_t dst_ip()
+        {
+          return(m_dst_ip);
+        }
+
       private:
         upstream_t m_upstream;
+        uint32_t m_src_ip;
+        uint32_t m_dst_ip;
     };
 
   }
@@ -197,6 +263,14 @@ namespace mna {
 
   namespace transport {
 
+    typedef struct UDP
+    {
+      uint16_t src_port;
+      uint16_t dest_port;
+      uint16_t len;
+      uint16_t chksum;
+    }__attribute__((packed))UDP;
+
     class udp {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
@@ -206,19 +280,37 @@ namespace mna {
         udp(udp&& ) = default;
         ~udp() = default;
 
-        int32_t rx(const uint8_t* udp, uint32_t udpLen)
-        {
-          std::cout << "udp::receive "<< std::endl;
-          return(m_upstream(udp, udpLen));
-        }
+        int32_t rx(const uint8_t* udp, uint32_t udpLen);
 
         void set_upstream(upstream_t us)
         {
           m_upstream = us;
         }
 
+        void src_port(uint16_t port)
+        {
+          m_src_port = port;
+        }
+
+        uint16_t src_port() const
+        {
+          return(m_src_port);
+        }
+
+        void dst_port(uint16_t port)
+        {
+          m_dst_port = port;
+        }
+
+        uint16_t dst_port() const
+        {
+          return(m_dst_port);
+        }
+
       private:
         upstream_t m_upstream;
+        uint16_t m_src_port;
+        uint16_t m_dst_port;
     };
 
     class tcp {

@@ -66,7 +66,9 @@ void mna::dhcp::OnRequest::onEntry(void* parent)
 {
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRequest::onEntry is invoked & Timer is started" << std::endl;
-  dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )dEnt->get_chaddr().data()));
+  std::string data((const char* )dEnt->get_chaddr().data(), 6);
+  //dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )dEnt->get_chaddr().data()));
+  dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )data.c_str()));
 }
 
 void mna::dhcp::OnRequest::onExit(void* parent)
@@ -126,7 +128,10 @@ void mna::dhcp::OnRelease::onEntry(void* parent)
 {
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRelease::onEntry is invoked & timer is started" << std::endl;
-  dEnt->set_tid(dEnt->startTimer(dEnt->get_lease(), (const void* )dEnt->get_chaddr().data()));
+  std::string data((const char* )dEnt->get_chaddr().data(), 6);
+  //dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )dEnt->get_chaddr().data()));
+  dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )data.c_str()));
+  //dEnt->set_tid(dEnt->startTimer(dEnt->get_lease(), (const void* )dEnt->get_chaddr().data()));
 }
 
 void mna::dhcp::OnRelease::onExit(void* parent)
@@ -623,13 +628,44 @@ long mna::dhcp::server::timedOut(const void* txn)
   return(0);
 }
 
+/**
+ * @brief
+ * @param
+ * @param
+ * @return
+ * */
+int32_t mna::eth::ether::rx(const uint8_t* in, uint32_t inLen)
+{
+  mna::eth::ETH* pET = (mna::eth::ETH* )in;
 
+  std::copy(std::begin(pET->src), std::end(pET->src), std::begin(m_src_mac));
+  std::copy(std::begin(pET->dest), std::end(pET->dest), std::begin(m_dst_mac));
 
+  /*Identify the packet type and connect the object of protocol layer by using delegate*/
+  return(m_upstream(&in[sizeof(mna::eth::ETH)], (inLen - sizeof(mna::eth::ETH))));
+}
 
+int32_t mna::ipv4::ip::rx(const uint8_t* in, uint32_t inLen)
+{
+  mna::ipv4::IP* pIP = (mna::ipv4::IP* )in;
 
+  /*IP header length in 32 bit word. minimum value is (5 * 4) */
+  uint32_t len = pIP->len * 4;
+  src_ip(pIP->src_ip);
+  dst_ip(pIP->dest_ip);
 
+  std::cout << "ip::receive len "<< pIP->len << " src_ip " << std::hex << src_ip() << " dst_ip " << std::hex << dst_ip() << std::endl;
+  return(m_upstream(&in[len], (inLen - len)));
+}
 
+int32_t mna::transport::udp::rx(const uint8_t* in, uint32_t inLen)
+{
+  mna::transport::UDP* pUDP = (mna::transport::UDP* )in;
+  src_port(pUDP->src_port);
+  dst_port(pUDP->dest_port);
 
-
+  std::cout << "udp::receive "<< std::endl;
+  return(m_upstream(in, inLen));
+}
 
 #endif /* __PROTOCOL_CC__ */
