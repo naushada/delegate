@@ -84,6 +84,7 @@ namespace mna {
       ACE_HANDLE get_handle(void) const override;
 
       long start_timer(ACE_UINT32 delay, const void *act, ACE_Time_Value interval = ACE_Time_Value::zero);
+      long start_timer(ACE_UINT32 delay, const void *act, bool periodicity);
       void stop_timer(long timerId);
       void reset_timer(long tId, ACE_UINT32 timeOutInSec);
 
@@ -155,10 +156,11 @@ namespace mna {
       upstream_delegate_t m_rx_dispatch;
       /*! runnining number for timerID */
       long m_tid;
+
       /* Timeout Delegate Handler */
       timer_delegate_t m_to_dispatch;
-      /*Pointers to layered protocol handler.*/
 
+      /*Pointers to layered protocol handler.*/
       mna::dhcp::server *m_s;
       mna::transport::udp *m_udp;
       mna::ipv4::ip *m_ip;

@@ -40,11 +40,14 @@ int main(int count, char* param[])
   pReq = (mna::dhcp::dhcp_t*)req;
   _et.rx(req, sizeof(req));
 
-#endif /*__UT__*/
-
   mna::middleware mw("enp0s9");
   mw.set_rx_dispatch(mw.eth().get_upstream());
   mw.set_timer_dispatch(mna::middleware::timer_delegate_t::from(mw.dhcp(), &mna::dhcp::server::timedOut));
+
+#endif /*__UT__*/
+
+  mna::middleware mw("enp0s9");
+  //mw.set_rx_dispatch(mw.eth().get_upstream());
 
   ACE_Reactor::instance()->register_handler(&mw, ACE_Event_Handler::READ_MASK);
 

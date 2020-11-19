@@ -241,13 +241,13 @@ int32_t mna::dhcp::OnInform::receive(void* parent, const uint8_t* inPtr, uint32_
 
 long mna::dhcp::dhcpEntry::startTimer(uint32_t delay, const void* txn)
 {
-  long tid = mna::middleware::instance()->start_timer(delay, txn);
+  long tid = get_start_timer()(delay, txn, false);
   return(tid);
 }
 
 void mna::dhcp::dhcpEntry::stopTimer(long tid)
 {
-  mna::middleware::instance()->stop_timer(tid);
+  get_stop_timer()(tid);
 }
 
 int32_t mna::dhcp::dhcpEntry::tx(uint8_t* out, uint32_t outLen)
@@ -528,6 +528,7 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
           elm.set_len(in[offset++]);
           std::memcpy(elm.m_val.data(), &in[offset], elm.get_len());
           offset += elm.get_len();
+
           /*Update the MAP now.*/
           m_elemDefUMap[tag] = elm;
 
@@ -598,11 +599,16 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
     /* New DHCP Client Request, create an entry for it. */
     dEnt = new dhcpEntry(this, 123, m_routerIP, m_dnsIP, m_lease, m_mtu, m_serverID, m_domainName);
 
+    /*insert into unordered_map now.*/
     bool ret = m_dhcpUmapOnMAC.insert(std::pair<std::string, dhcpEntry*>(MAC, dEnt)).second;
 
     if(!ret) {
       std::cout << "Insertion of dhcpEntry failed " << std::endl;
     }
+
+    dEnt->set_start_timer(m_start_timer);
+    dEnt->set_stop_timer(m_stop_timer);
+    dEnt->set_reset_timer(m_reset_timer);
 
   }
 
@@ -665,7 +671,7 @@ int32_t mna::transport::udp::rx(const uint8_t* in, uint32_t inLen)
   dst_port(pUDP->dest_port);
 
   std::cout << "udp::receive "<< std::endl;
-  return(m_upstream(in, inLen));
+  return(m_upstream(&in[sizeof(mna::transport::UDP)], (inLen - sizeof(mna::transport::UDP))));
 }
 
 #endif /* __PROTOCOL_CC__ */

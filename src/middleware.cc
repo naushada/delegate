@@ -62,7 +62,7 @@ ACE_INT32 mna::middleware::handle_signal(int signum, siginfo_t *s, ucontext_t *u
   ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the signum is %u\n"), signum));
   //process_signal(signum);
 
- return(0);
+  return(0);
 }
 
 /*
@@ -76,6 +76,7 @@ ACE_HANDLE mna::middleware::handle_timeout(const ACE_Time_Value &tv, const void 
 {
   ACE_TRACE(("mna::middleware::handle_timeout"));
   ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l Timer is expired\n")));
+
   process_timeout(arg);
   return(0);
 }
@@ -104,6 +105,30 @@ long mna::middleware::start_timer(ACE_UINT32 to,
   return(tid);
 }
 
+/*
+ * @brief this member function is invoked to start the timer.
+ * @param This is the duration for timer.
+ * @param This is the argument passed by caller.
+ * @param This is to denote the preodicity whether this timer is going to be periodic or not.
+ * @return timer_id is return.
+ * */
+long mna::middleware::start_timer(ACE_UINT32 to,
+                                  const void *act,
+                                  bool periodicity)
+{
+  ACE_TRACE(("mna::middleware::start_timer"));
+  ACE_Time_Value delay(to);
+  long tid = 0;
+
+  tid = ACE_Reactor::instance()->schedule_timer(this,
+                                                act,
+                                                delay,
+                                                ACE_Time_Value::zero/*After this interval, timer will be started automatically.*/);
+
+  /*Timer Id*/
+  return(tid);
+}
+
 void mna::middleware::stop_timer(long tId)
 {
   ACE_Reactor::instance()->cancel_timer(tId);
@@ -111,7 +136,7 @@ void mna::middleware::stop_timer(long tId)
 
 long mna::middleware::process_timeout(const void *act)
 {
-  std::cout << "process_timeout is invoked " << std::endl;
+  ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l In process_timeout %u\n"), act));
   get_timer_dispatch()(act);
   return(0);
 }
@@ -255,19 +280,102 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
   do {
 
     if(!pEth) {
-      std::cout << "Pointer to Ethernet Packet is null" << std::endl;
+      ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Pointer to ethernet packet is nullptr\n")));
       break;
     }
 
     switch(ntohs(pEth->proto)) {
 
-      case mna::eth::IPv4:
+      case mna::eth::IPv4: {
+
+        mna::ipv4::IP* pIP = (mna::ipv4::IP* )&in[sizeof(mna::eth::ETH)];
         eth().set_upstream(mna::ipv4::ip::upstream_t::from(ip(), &mna::ipv4::ip::rx));
-        ip().set_upstream(mna::transport::udp::upstream_t::from(udp(), &mna::transport::udp::rx));
-        udp().set_upstream(mna::dhcp::server::upstream_t::from(dhcp(), &mna::dhcp::server::rx));
-        eth().rx(in, inLen);
-        //processIPv4Packets(in, inLen);
-        break;
+
+        switch(pIP->proto) {
+          case mna::ipv4::ICMP: {
+
+            //ip().set_upstream(mna::transport::tcp::upstream_t::from(tcp(), &mna::transport::tcp::rx));
+            break;
+          }
+
+          case mna::ipv4::TCP: {
+
+            mna::transport::TCP* pTCP = (mna::transport::TCP* )&pIP[sizeof(mna::transport::TCP)];
+            //ip().set_upstream(mna::transport::tcp::upstream_t::from(tcp(), &mna::transport::tcp::rx));
+            switch(ntohs(pTCP->dest_port)) {
+              case mna::transport::HTTP: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the HTTP is %u\n"), 80));
+                break;
+              }
+              case mna::transport::RADIUS_AUTH: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the RADIUS_AUTH is %u\n"), 80));
+                break;
+              }
+              case mna::transport::RADIUS_ACC: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the RADIUS_ACC is %u\n"), 80));
+                break;
+              }
+              case mna::transport::HTTPS: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the HTTPS is %u\n"), 80));
+                break;
+              }
+              default: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the Default is %u\n"), 80));
+                break;
+              }
+
+            }
+            break;
+          }
+
+          case mna::ipv4::UDP: {
+            ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the porotocol is UDP \n")));
+            ip().set_upstream(mna::transport::udp::upstream_t::from(udp(), &mna::transport::udp::rx));
+            mna::transport::UDP* pUDP = (mna::transport::UDP* )&pIP[sizeof(mna::transport::UDP)];
+
+            switch(ntohs(pUDP->dest_port)) {
+
+              case mna::transport::BOOTPS: {
+
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the DHCP dest_port is %u\n"), ntohs(pUDP->dest_port)));
+                udp().set_upstream(mna::dhcp::server::upstream_t::from(dhcp(), &mna::dhcp::server::rx));
+
+                /*Updating timers' member function.*/
+                dhcp().set_start_timer(mna::dhcp::server::start_timer_t::from(*this, &mna::middleware::start_timer));
+                dhcp().set_stop_timer(mna::dhcp::server::stop_timer_t::from(*this, &mna::middleware::stop_timer));
+
+                /*! Kick the processing of the request now.*/
+                eth().rx(in, inLen);
+                break;
+
+              }
+
+              case mna::transport::DNS: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the DNS is \n")));
+                break;
+              }
+
+              default:
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the port is %u\n"), ntohs(pUDP->dest_port)));
+                break;
+            }
+
+            break;
+          }
+
+          case mna::ipv4::L2TP: {
+
+          }
+
+          default: {
+            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l The IP Protocol is %d\n"), pIP->proto));
+          }
+
+      }
+
+      break;
+    }
+
       case mna::eth::IPv6:
         break;
       case mna::eth::ARP:

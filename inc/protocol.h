@@ -211,6 +211,13 @@ namespace mna {
       uint32_t dest_ip;
     }__attribute__((packed))IP;
 
+    enum proto_t : uint8_t {
+      ICMP = 1,
+      TCP = 6,
+      UDP = 17,
+      L2TP = 112
+    };
+
     class ip {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
@@ -263,13 +270,50 @@ namespace mna {
 
   namespace transport {
 
-    typedef struct UDP
-    {
+    typedef struct UDP {
       uint16_t src_port;
       uint16_t dest_port;
       uint16_t len;
       uint16_t chksum;
     }__attribute__((packed))UDP;
+
+    typedef struct TCP {
+      uint16_t src_port;
+      uint16_t dest_port;
+      uint32_t seq_no;
+      uint32_t ack_no;
+      uint16_t data_off:4;
+      uint16_t reserved:3;
+      uint16_t ecn:3;
+      uint16_t u:1;
+      uint16_t a:1;
+      uint16_t p:1;
+      uint16_t r:1;
+      uint16_t s:1;
+      uint16_t f:1;
+      uint16_t window;
+      uint16_t check_sum;
+      uint16_t u_pointer;
+    }__attribute__((packed))TCP;
+
+    /*pseudo TCP Header for calculating checksum.*/
+    typedef struct PHDR {
+      uint32_t src_ip;
+      uint32_t dest_ip;
+      uint32_t reserve:8;
+      uint32_t proto:8;
+      uint32_t total_len:16;
+    }__attribute__((packed))PHDR;
+
+    enum port_list : uint16_t {
+      BOOTPS = 67,
+      BOOTPC = 68,
+      DNS = 53,
+      HTTP = 80,
+      RADIUS_AUTH = 1812,
+      RADIUS_ACC = 1813,
+      HTTPS = 443
+    };
 
     class udp {
       public:
@@ -314,6 +358,45 @@ namespace mna {
     };
 
     class tcp {
+      public:
+        using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+
+        tcp() = default;
+        tcp(const tcp& ) = default;
+        tcp(tcp&& ) = default;
+        ~tcp() = default;
+
+        int32_t rx(const uint8_t* in, uint32_t inLen);
+
+        void set_upstream(upstream_t us)
+        {
+          m_upstream = us;
+        }
+
+        void src_port(uint16_t port)
+        {
+          m_src_port = port;
+        }
+
+        uint16_t src_port() const
+        {
+          return(m_src_port);
+        }
+
+        void dst_port(uint16_t port)
+        {
+          m_dst_port = port;
+        }
+
+        uint16_t dst_port() const
+        {
+          return(m_dst_port);
+        }
+
+      private:
+        upstream_t m_upstream;
+        uint16_t m_src_port;
+        uint16_t m_dst_port;
     };
 
     class tun {
@@ -602,6 +685,10 @@ namespace mna {
 
     class dhcpEntry {
       public:
+        using start_timer_t = delegate<long (uint32_t, const void*, bool)>;
+        using stop_timer_t = delegate<void (long)>;
+        using reset_timer_t = delegate<void (long, uint32_t)>;
+
         /** This UMap stores DHCP Option received in DISCOVER/REQUEST. */
         element_def_UMap_t m_elemDefUMap;
 
@@ -676,7 +763,37 @@ namespace mna {
           m_tid = tid;
         }
 
+        void set_start_timer(start_timer_t st)
+        {
+          m_start_timer = st;
+        }
+
+        start_timer_t& get_start_timer()
+        {
+          return(m_start_timer);
+        }
+
+        void set_stop_timer(stop_timer_t st)
+        {
+          m_stop_timer = st;
+        }
+
+        stop_timer_t& get_stop_timer()
+        {
+          return(m_stop_timer);
+        }
+
+        void set_reset_timer(reset_timer_t rt)
+        {
+          m_reset_timer = rt;
+        }
+
+
       private:
+
+        start_timer_t m_start_timer;
+        stop_timer_t m_stop_timer;
+        reset_timer_t m_reset_timer;
 
         /* Per DHCP Client State Machine. */
         FSM* m_fsm;
@@ -712,7 +829,11 @@ namespace mna {
     class server {
 
       public:
+
         using upstream_t = delegate<int32_t (const uint8_t* in, uint32_t inLen)>;
+        using start_timer_t = delegate<long (uint32_t, const void*, bool)>;
+        using stop_timer_t = delegate<void (long)>;
+        using reset_timer_t = delegate<void (long, uint32_t)>;
 
         dhcp_entry_onMAC_t m_dhcpUmapOnMAC;
         dhcp_entry_onIP_t m_dhcpUmapOnIP;
@@ -737,7 +858,26 @@ namespace mna {
           m_upstream = us;
         }
 
+        void set_start_timer(start_timer_t st)
+        {
+          m_start_timer = st;
+        }
+
+        void set_stop_timer(stop_timer_t st)
+        {
+          m_stop_timer = st;
+        }
+
+        void set_reset_timer(reset_timer_t rt)
+        {
+          m_reset_timer = rt;
+        }
+
       private:
+
+        start_timer_t m_start_timer;
+        stop_timer_t m_stop_timer;
+        reset_timer_t m_reset_timer;
 
         upstream_t m_upstream;
         /* The Router IP for DHCP Client. */
