@@ -4,6 +4,8 @@
 #include "middleware.h"
 #include "protocol.h"
 
+mna::middleware* mna::middleware::m_instance = nullptr;
+
 /*
  * @brief  This is the hook method for application to define this member function and is invoked by
  *         ACE Framework.
@@ -18,13 +20,11 @@ ACE_INT32 mna::middleware::handle_input(ACE_HANDLE handle)
 
   ACE_NEW_RETURN(mb, ACE_Message_Block(mna::SIZE_1MB), -1);
 
-  mna::eth::ether m_instEth(m_intf);
-
   do
   {
     ACE_OS::memset((void *)mb->wr_ptr(), 0, mna::SIZE_1MB);
 
-    if((recv_len = m_sock_dgram.recv(mb->wr_ptr(), mna::SIZE_1MB, peer)) < 0)
+    if(!(recv_len = m_sock_dgram.recv(mb->wr_ptr(), mna::SIZE_1MB, peer)))
     {
       ACE_ERROR((LM_ERROR, "Receive from peer 0x%X Failed\n", peer.get_port_number()));
       break;
@@ -34,8 +34,11 @@ ACE_INT32 mna::middleware::handle_input(ACE_HANDLE handle)
     /*Update the length now.*/
     mb->wr_ptr(recv_len);
 
-    /* dispatch the packet to upstream */
-    m_instEth.rx(reinterpret_cast<uint8_t*>(mb->rd_ptr()), mb->length());
+    /* dispatch packet to the upstream */
+    rx(reinterpret_cast<uint8_t*>(mb->rd_ptr()), (uint32_t)mb->length());
+
+    /* Reclaim the heap memory now.*/
+    mb->release();
 
   }while(0);
 
@@ -62,7 +65,6 @@ ACE_INT32 mna::middleware::handle_signal(int signum, siginfo_t *s, ucontext_t *u
   return(0);
 }
 
-
 /*
  * @brief  This is the hook method for application to process the timer expiry. This is invoked by
  *         ACE Framework upon expiry of timer.
@@ -73,6 +75,8 @@ ACE_INT32 mna::middleware::handle_signal(int signum, siginfo_t *s, ucontext_t *u
 ACE_HANDLE mna::middleware::handle_timeout(const ACE_Time_Value &tv, const void *arg)
 {
   ACE_TRACE(("mna::middleware::handle_timeout"));
+  ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l Timer is expired\n")));
+
   process_timeout(arg);
   return(0);
 }
@@ -101,17 +105,57 @@ long mna::middleware::start_timer(ACE_UINT32 to,
   return(tid);
 }
 
+/*
+ * @brief this member function is invoked to start the timer.
+ * @param This is the duration for timer.
+ * @param This is the argument passed by caller.
+ * @param This is to denote the preodicity whether this timer is going to be periodic or not.
+ * @return timer_id is return.
+ * */
+long mna::middleware::start_timer(ACE_UINT32 to,
+                                  const void *act,
+                                  bool periodicity)
+{
+  ACE_TRACE(("mna::middleware::start_timer"));
+  ACE_Time_Value delay(to);
+  long tid = 0;
+
+  tid = ACE_Reactor::instance()->schedule_timer(this,
+                                                act,
+                                                delay,
+                                                ACE_Time_Value::zero/*After this interval, timer will be started automatically.*/);
+
+  /*Timer Id*/
+  return(tid);
+}
+
 void mna::middleware::stop_timer(long tId)
 {
   ACE_Reactor::instance()->cancel_timer(tId);
 }
 
-ACE_INT32 mna::middleware::process_timeout(const void *act)
+long mna::middleware::process_timeout(const void *act)
 {
-  /*! Derived class function should have been called.*/
+  ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l In process_timeout %u\n"), act));
+  get_timer_dispatch()(act);
   return(0);
 }
 
+mna::middleware* mna::middleware::instance()
+{
+  if(!m_instance) {
+    m_instance = new mna::middleware();
+  }
+
+  return(m_instance);
+}
+
+/**
+ * @brief this member method opens the ethernet interface and configures it to receive bcast packet,
+ *        with complete ethernet packet.
+ * @param none
+ * @return upon success handle else < 0.
+ * */
 ACE_HANDLE mna::middleware::open_and_bind_intf()
 {
   ACE_HANDLE handle = -1;
@@ -142,7 +186,7 @@ ACE_HANDLE mna::middleware::open_and_bind_intf()
       break;
     }
 
-    ifr.ifr_flags |= IFF_PROMISC | IFF_NOARP;
+    ifr.ifr_flags |= (IFF_PROMISC | IFF_NOARP);
 
     if(ACE_OS::ioctl(handle, SIOCSIFFLAGS, &ifr) < 0)
     {
@@ -179,7 +223,11 @@ ACE_HANDLE mna::middleware::open_and_bind_intf()
   return(handle);
 }
 
-
+/**
+ * @brief This member method retrieves the eth device index based on eth device name.
+ * @param none
+ * @return upon success eth index else < 0.
+ * */
 ACE_INT32 mna::middleware::get_index()
 {
   ACE_HANDLE handle = -1;
@@ -216,5 +264,139 @@ ACE_INT32 mna::middleware::get_index()
 
   return(retStatus);
 }
+
+/**
+ * @brief This is the main entry point to protocol interface, the ethernet packet is
+ *        passed to ethernet handler with help of delegate.
+ * @param pointer to const ethernet packet.
+ * @param length of ethernet packet.
+ * @return 0 upon success else < 0.
+ * */
+int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
+{
+  /*Identify the packet type and connect the object of protocol layer by using delegate*/
+  mna::eth::ETH* pEth = (mna::eth::ETH* )in;
+
+  do {
+
+    if(!pEth) {
+      ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Pointer to ethernet packet is nullptr\n")));
+      break;
+    }
+
+    switch(ntohs(pEth->proto)) {
+
+      case mna::eth::IPv4: {
+
+        mna::ipv4::IP* pIP = (mna::ipv4::IP* )&in[sizeof(mna::eth::ETH)];
+        eth().set_upstream(mna::ipv4::ip::upstream_t::from(ip(), &mna::ipv4::ip::rx));
+
+        switch(pIP->proto) {
+          case mna::ipv4::ICMP: {
+
+            //ip().set_upstream(mna::transport::tcp::upstream_t::from(tcp(), &mna::transport::tcp::rx));
+            break;
+          }
+
+          case mna::ipv4::TCP: {
+
+            mna::transport::TCP* pTCP = (mna::transport::TCP* )&pIP[sizeof(mna::transport::TCP)];
+            //ip().set_upstream(mna::transport::tcp::upstream_t::from(tcp(), &mna::transport::tcp::rx));
+            switch(ntohs(pTCP->dest_port)) {
+              case mna::transport::HTTP: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the HTTP is %u\n"), 80));
+                break;
+              }
+              case mna::transport::RADIUS_AUTH: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the RADIUS_AUTH is %u\n"), 80));
+                break;
+              }
+              case mna::transport::RADIUS_ACC: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the RADIUS_ACC is %u\n"), 80));
+                break;
+              }
+              case mna::transport::HTTPS: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the HTTPS is %u\n"), 80));
+                break;
+              }
+              default: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the Default is %u\n"), 80));
+                break;
+              }
+
+            }
+            break;
+          }
+
+          case mna::ipv4::UDP: {
+            ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the porotocol is UDP \n")));
+            ip().set_upstream(mna::transport::udp::upstream_t::from(udp(), &mna::transport::udp::rx));
+            mna::transport::UDP* pUDP = (mna::transport::UDP* )&pIP[sizeof(mna::transport::UDP)];
+
+            switch(ntohs(pUDP->dest_port)) {
+
+              case mna::transport::BOOTPS: {
+
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the DHCP dest_port is %u\n"), ntohs(pUDP->dest_port)));
+                udp().set_upstream(mna::dhcp::server::upstream_t::from(dhcp(), &mna::dhcp::server::rx));
+
+                /*Updating timers' member function.*/
+                dhcp().set_start_timer(mna::dhcp::server::start_timer_t::from(*this, &mna::middleware::start_timer));
+                dhcp().set_stop_timer(mna::dhcp::server::stop_timer_t::from(*this, &mna::middleware::stop_timer));
+
+                /*! Kick the processing of the request now.*/
+                eth().rx(in, inLen);
+                break;
+
+              }
+
+              case mna::transport::DNS: {
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the DNS is \n")));
+                break;
+              }
+
+              default:
+                ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the port is %u\n"), ntohs(pUDP->dest_port)));
+                break;
+            }
+
+            break;
+          }
+
+          case mna::ipv4::L2TP: {
+
+          }
+
+          default: {
+            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l The IP Protocol is %d\n"), pIP->proto));
+          }
+
+      }
+
+      break;
+    }
+
+      case mna::eth::IPv6:
+        break;
+      case mna::eth::ARP:
+        break;
+      case mna::eth::EAPOL:
+        break;
+      case mna::eth::PPP:
+        break;
+      default:
+        break;
+    }
+
+  } while(0);
+
+  return(0);
+}
+
+int32_t mna::middleware::tx(uint8_t* out, uint32_t inLen)
+{
+  return(0);
+}
+
 
 #endif /*__MIDDLEWARE_CC__*/

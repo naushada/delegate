@@ -7,9 +7,9 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cstring>
+#include <arpa/inet.h>
 
 namespace mna {
-
   class FSM {
 
     public:
@@ -20,13 +20,14 @@ namespace mna {
        *          argument is the length of received request.
        * */
       using receive_delegate_t = delegate<int32_t (void* parent, const uint8_t*, uint32_t)>;
-      using state_delegate_t = delegate<void ()>;
+      using state_delegate_t = delegate<void (void* parent)>;
 
-      FSM()
+      FSM(void* parent)
       {
         on_receive.reset();
         on_exit.reset();
         on_entry.reset();
+        m_parent = parent;
       }
 
       FSM(const FSM& fsm) = default;
@@ -45,6 +46,7 @@ namespace mna {
         on_receive.reset();
         on_exit.reset();
         on_entry.reset();
+        m_parent = nullptr;
       }
 
       /**
@@ -59,7 +61,7 @@ namespace mna {
       {
         if(on_receive && on_exit) {
           /* invoking upon state exit */
-          on_exit();
+          on_exit(m_parent);
           on_exit.reset();
           on_receive.reset();
           on_entry.reset();
@@ -71,7 +73,7 @@ namespace mna {
         on_entry = state_delegate_t::from<C, &C::onEntry>(inst);
 
         /* invoking upon state entry */
-        on_entry();
+        on_entry(m_parent);
       }
 
       /**
@@ -92,15 +94,16 @@ namespace mna {
        * @param length of received length.
        * @return whatever deledagte returns.
        * */
-      int32_t rx(void* parent, const uint8_t* inPtr, uint32_t inLen) const
+      int32_t rx(const uint8_t* inPtr, uint32_t inLen) const
       {
-        return(on_receive(parent, inPtr, inLen));
+        return(on_receive(m_parent, inPtr, inLen));
       }
 
       private:
         receive_delegate_t on_receive;
         state_delegate_t on_entry;
         state_delegate_t on_exit;
+        void* m_parent;
   };
 
   namespace eth {
@@ -126,30 +129,142 @@ namespace mna {
     class ether {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
 
-        ether(std::string& intf) : m_intf(intf)
+        ether(const std::string& intf) : m_intf(intf)
         {
+          m_src_mac.fill(0);
+          m_dst_mac.fill(0);
         }
 
         ether(const ether& ) = default;
         ether(ether&& ) = default;
         ~ether() = default;
 
-        int32_t rx(const uint8_t* ethPacket, uint32_t packetLen)
+        int32_t rx(const uint8_t* ethPacket, uint32_t packetLen);
+        int32_t tx(uint8_t* ethPacket, uint32_t packetLen);
+
+        void set_upstream(upstream_t us)
         {
-          return(upstream(ethPacket, packetLen));
+          m_upstream = us;
+        }
+
+        upstream_t& get_upstream()
+        {
+          return(m_upstream);
+        }
+
+        void src_mac(std::array<uint8_t, 6> smac)
+        {
+          m_src_mac = smac;
+        }
+
+        std::array<uint8_t, 6>& src_mac()
+        {
+          return(m_src_mac);
+        }
+
+        void dst_mac(std::array<uint8_t, 6> dmac)
+        {
+          m_dst_mac = dmac;
+        }
+
+        std::array<uint8_t, 6>& dst_mac()
+        {
+          return(m_dst_mac);
+        }
+
+        void index(uint32_t idx)
+        {
+          m_index = idx;
+        }
+
+        uint32_t index()
+        {
+          return(m_index);
         }
 
       private:
-        upstream_t upstream;
+        upstream_t m_upstream;
+        downstream_t m_downstream;
         std::string m_intf;
         uint32_t m_index;
+        std::array<uint8_t, 6> m_src_mac;
+        std::array<uint8_t, 6> m_dst_mac;
     };
 
   }
 
   namespace ipv4 {
+
+    typedef struct IP {
+      uint32_t len:4;
+      uint32_t ver:4;
+      uint32_t tos:8;
+      uint32_t tot_len:16;
+
+      uint16_t id;
+      uint16_t flags;
+
+      uint32_t ttl:8;
+      uint32_t proto:8;
+      uint32_t chksum:16;
+
+      uint32_t src_ip;
+      uint32_t dest_ip;
+    }__attribute__((packed))IP;
+
+    enum proto_t : uint8_t {
+      ICMP = 1,
+      TCP = 6,
+      UDP = 17,
+      L2TP = 112
+    };
+
     class ip {
+      public:
+        using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
+
+        ip() = default;
+        ip(const ip& ) = default;
+        ip(ip&& ) = default;
+        ~ip() = default;
+
+        int32_t rx(const uint8_t* ip, uint32_t ipLen);
+        int32_t tx(uint8_t* ip, uint32_t ipLen);
+        uint16_t checksum(const uint16_t* in, size_t inLen) const;
+
+        void set_upstream(upstream_t us)
+        {
+          m_upstream = us;
+        }
+
+        void src_ip(uint32_t sip)
+        {
+          m_src_ip = sip;
+        }
+
+        uint32_t src_ip()
+        {
+          return(m_src_ip);
+        }
+
+        void dst_ip(uint32_t dip)
+        {
+          m_dst_ip = dip;
+        }
+
+        uint32_t dst_ip()
+        {
+          return(m_dst_ip);
+        }
+
+      private:
+        upstream_t m_upstream;
+        downstream_t m_downstream;
+        uint32_t m_src_ip;
+        uint32_t m_dst_ip;
     };
 
   }
@@ -162,10 +277,141 @@ namespace mna {
 
   namespace transport {
 
+    typedef struct UDP {
+      uint16_t src_port;
+      uint16_t dest_port;
+      uint16_t len;
+      uint16_t chksum;
+    }__attribute__((packed))UDP;
+
+    typedef struct TCP {
+      uint16_t src_port;
+      uint16_t dest_port;
+      uint32_t seq_no;
+      uint32_t ack_no;
+      uint16_t data_off:4;
+      uint16_t reserved:3;
+      uint16_t ecn:3;
+      uint16_t u:1;
+      uint16_t a:1;
+      uint16_t p:1;
+      uint16_t r:1;
+      uint16_t s:1;
+      uint16_t f:1;
+      uint16_t window;
+      uint16_t check_sum;
+      uint16_t u_pointer;
+    }__attribute__((packed))TCP;
+
+    /*pseudo TCP Header for calculating checksum.*/
+    typedef struct PHDR {
+      uint32_t src_ip;
+      uint32_t dest_ip;
+      uint32_t reserve:8;
+      uint32_t proto:8;
+      uint32_t total_len:16;
+    }__attribute__((packed))PHDR;
+
+    enum port_list : uint16_t {
+      BOOTPS = 67,
+      BOOTPC = 68,
+      DNS = 53,
+      HTTP = 80,
+      RADIUS_AUTH = 1812,
+      RADIUS_ACC = 1813,
+      HTTPS = 443
+    };
+
     class udp {
+      public:
+        using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
+
+        udp() = default;
+        udp(const udp& ) = default;
+        udp(udp&& ) = default;
+        ~udp() = default;
+
+        int32_t rx(const uint8_t* udp, uint32_t udpLen);
+        int32_t tx(uint8_t* ip, uint32_t ipLen);
+        uint16_t checksum(const uint16_t* in, size_t inLen) const;
+        uint16_t build_pseudo(uint8_t* in) const;
+
+        void set_upstream(upstream_t us)
+        {
+          m_upstream = us;
+        }
+
+        void src_port(uint16_t port)
+        {
+          m_src_port = port;
+        }
+
+        uint16_t src_port() const
+        {
+          return(m_src_port);
+        }
+
+        void dst_port(uint16_t port)
+        {
+          m_dst_port = port;
+        }
+
+        uint16_t dst_port() const
+        {
+          return(m_dst_port);
+        }
+
+      private:
+        upstream_t m_upstream;
+        downstream_t m_downstream;
+        uint16_t m_src_port;
+        uint16_t m_dst_port;
     };
 
     class tcp {
+      public:
+        using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
+
+        tcp() = default;
+        tcp(const tcp& ) = default;
+        tcp(tcp&& ) = default;
+        ~tcp() = default;
+
+        int32_t rx(const uint8_t* in, uint32_t inLen);
+        int32_t tx(uint8_t* in, uint32_t inLen);
+
+        void set_upstream(upstream_t us)
+        {
+          m_upstream = us;
+        }
+
+        void src_port(uint16_t port)
+        {
+          m_src_port = port;
+        }
+
+        uint16_t src_port() const
+        {
+          return(m_src_port);
+        }
+
+        void dst_port(uint16_t port)
+        {
+          m_dst_port = port;
+        }
+
+        uint16_t dst_port() const
+        {
+          return(m_dst_port);
+        }
+
+      private:
+        upstream_t m_upstream;
+        downstream_t m_downstream;
+        uint16_t m_src_port;
+        uint16_t m_dst_port;
     };
 
     class tun {
@@ -244,7 +490,6 @@ namespace mna {
 
       public:
 
-        //element_def_t() = default;
         ~element_def_t() = default;
 
         element_def_t()
@@ -260,7 +505,6 @@ namespace mna {
           set_tag(elm.get_tag());
           set_len(elm.get_len());
           set_val(elm.get_val());
-          std::cout << "copy ctor is called " << std::endl;
         }
 
         element_def_t(element_def_t&& elem) noexcept = default;
@@ -272,13 +516,12 @@ namespace mna {
           m_tag = elem.m_tag;
           m_len = elem.m_len;
           m_val = elem.m_val;
-          std::cout << "Assignment Operator is called " << std::endl;
           return *this;
         }
 
         /**
          * @brief by adding const qualifier ensures that this method does not
-         * modify the private data member.*/
+         * modify the private data member.This is a way to make this as pointer to const.*/
         const std::array<uint8_t, 255>& get_val() const
         {
           return(m_val);
@@ -310,6 +553,8 @@ namespace mna {
         }
     };
 
+    class server;
+    class dhcpEntry;
     class OnDiscover {
       public:
 
@@ -319,8 +564,8 @@ namespace mna {
 
         ~OnDiscover() = default;
 
-        void onEntry();
-        void onExit();
+        void onEntry(void* parent);
+        void onExit(void* parent);
 
         /**
          * @brief This is a delegate member function which is invoked from FSM Class.
@@ -329,6 +574,7 @@ namespace mna {
 
         static OnDiscover& instance()
         {
+          /* NB: static variable is instantiated only once.*/
           static OnDiscover m_instance;
           return(m_instance);
         }
@@ -343,8 +589,8 @@ namespace mna {
 
         ~OnRequest() = default;
 
-        void onEntry();
-        void onExit();
+        void onEntry(void* );
+        void onExit(void* );
 
         /**
          * @brief This is a delegate member function which is invoked from FSM Class.
@@ -361,14 +607,13 @@ namespace mna {
     class OnRelease {
       public:
 
-      OnRelease() = default;
-      OnRelease(const OnRelease& ) = default;
-      OnRelease(OnRelease&& ) = default;
+        OnRelease() = default;
+        OnRelease(const OnRelease& ) = default;
+        OnRelease(OnRelease&& ) = default;
+        ~OnRelease() = default;
 
-      ~OnRelease() = default;
-
-        void onEntry();
-        void onExit();
+        void onEntry(void* );
+        void onExit(void* );
 
         /**
          * @brief This is a delegate member function which is invoked from FSM Class.
@@ -383,6 +628,25 @@ namespace mna {
     };
 
     class OnInform {
+      public:
+        OnInform() = default;
+        OnInform(const OnInform& ) = default;
+        OnInform(OnInform&& ) = default;
+        ~OnInform() = default;
+
+        void onEntry(void* );
+        void onExit(void* );
+
+        /**
+         * @brief This is a delegate member function which is invoked from FSM Class.
+         * */
+        int32_t receive(void* parent, const uint8_t *inPtr, uint32_t inLen);
+
+        static OnInform& instance()
+        {
+          static OnInform m_instance;
+          return(m_instance);
+        }
     };
 
     class OnDecline {
@@ -390,6 +654,25 @@ namespace mna {
 
 
     class OnLeaseExpire {
+      public:
+        OnLeaseExpire() = default;
+        OnLeaseExpire(const OnLeaseExpire& ) = default;
+        OnLeaseExpire(OnLeaseExpire&& ) = default;
+        ~OnLeaseExpire() = default;
+
+        void onEntry(void* );
+        void onExit(void* );
+
+        /**
+         * @brief This is a delegate member function which is invoked from FSM Class.
+         * */
+        int32_t receive(void* parent, const uint8_t *inPtr, uint32_t inLen);
+
+        static OnLeaseExpire& instance()
+        {
+          static OnLeaseExpire m_instance;
+          return(m_instance);
+        }
     };
 
     typedef struct {
@@ -414,8 +697,13 @@ namespace mna {
 
     using element_def_UMap_t = std::unordered_map<uint8_t, element_def_t>;
 
+
     class dhcpEntry {
       public:
+        using start_timer_t = delegate<long (uint32_t, const void*, bool)>;
+        using stop_timer_t = delegate<void (long)>;
+        using reset_timer_t = delegate<void (long, uint32_t)>;
+
         /** This UMap stores DHCP Option received in DISCOVER/REQUEST. */
         element_def_UMap_t m_elemDefUMap;
 
@@ -424,20 +712,19 @@ namespace mna {
 
         dhcpEntry()
         {
-          m_fsm = new FSM;
+          m_fsm = new FSM(this);
         }
 
         ~dhcpEntry()
         {
-          delete m_fsm;
-          m_fsm = nullptr;
         }
 
 
-        dhcpEntry(uint32_t clientIP, uint32_t routerIP, uint32_t dnsIP,
+        dhcpEntry(server* parent, uint32_t clientIP, uint32_t routerIP, uint32_t dnsIP,
                   uint32_t lease, uint32_t mtu, uint32_t serverID, std::string domainName)
         {
-          m_fsm = new FSM;
+          m_fsm = new FSM(this);
+          m_parent = parent;
           std::swap(m_clientIP, clientIP);
           std::swap(m_routerIP, routerIP);
           std::swap(m_dnsIP, dnsIP);
@@ -447,7 +734,7 @@ namespace mna {
           std::swap(m_domainName, domainName);
 
           /* Initializing the State Machine. */
-          setState<OnDiscover>(OnDiscover::instance());
+          setState(OnDiscover::instance());
         }
 
         FSM& getState() const
@@ -464,15 +751,69 @@ namespace mna {
         int32_t rx(const uint8_t* in, uint32_t inLen);
 
         int32_t parseOptions(const uint8_t* in, uint32_t inLen);
-        int32_t buildAndSendOffer(const uint8_t* in, uint32_t inLen);
-        int32_t buildAndSendAck(const uint8_t* in, uint32_t inLen);
+        int32_t buildAndSendResponse(const uint8_t* in, uint32_t inLen);
         int32_t tx(uint8_t* out, uint32_t outLen);
+
+        /** Timer related API. */
+        long startTimer(uint32_t delay, const void* txn);
+        void stopTimer(long tid);
+
+        uint32_t get_lease() const
+        {
+          return(m_lease);
+        }
+
+        std::array<uint8_t, 6> get_chaddr() const
+        {
+          return(m_chaddr);
+        }
+
+        long get_tid() const
+        {
+          return(m_tid);
+        }
+
+        void set_tid(long tid)
+        {
+          m_tid = tid;
+        }
+
+        void set_start_timer(start_timer_t st)
+        {
+          m_start_timer = st;
+        }
+
+        start_timer_t& get_start_timer()
+        {
+          return(m_start_timer);
+        }
+
+        void set_stop_timer(stop_timer_t st)
+        {
+          m_stop_timer = st;
+        }
+
+        stop_timer_t& get_stop_timer()
+        {
+          return(m_stop_timer);
+        }
+
+        void set_reset_timer(reset_timer_t rt)
+        {
+          m_reset_timer = rt;
+        }
+
 
       private:
 
+        start_timer_t m_start_timer;
+        stop_timer_t m_stop_timer;
+        reset_timer_t m_reset_timer;
+
         /* Per DHCP Client State Machine. */
         FSM* m_fsm;
-
+        /*backpointer to dhcp server.*/
+        server* m_parent;
         /* The IP address allocated/Offered to DHCP Client. */
         uint32_t m_clientIP;
         /* Unique transaction ID of message received. */
@@ -488,11 +829,14 @@ namespace mna {
         /* The DHCP Server Identifier - Which is IP Address. */
         uint32_t m_serverID;
         /* The DHCP Client MAC Address. */
-        std::array<char, 6> m_chaddr;
+        std::array<uint8_t, 6> m_chaddr;
         /* The Domain Name to be assigned to DHCP Client. */
         std::string m_domainName;
+        /* Name of Machine on which DHCP server is running. */
+        std::string m_hostName;
+        /** The timer ID*/
+        long m_tid;
     };
-
 
     using dhcp_entry_onMAC_t = std::unordered_map<std::string, dhcpEntry*>;
     using dhcp_entry_onIP_t = std::unordered_map<uint32_t, dhcpEntry>;
@@ -500,7 +844,11 @@ namespace mna {
     class server {
 
       public:
-        using upstream_delegate_t = delegate<int32_t (const uint8_t* in, uint32_t inLen)>;
+
+        using upstream_t = delegate<int32_t (const uint8_t* in, uint32_t inLen)>;
+        using start_timer_t = delegate<long (uint32_t, const void*, bool)>;
+        using stop_timer_t = delegate<void (long)>;
+        using reset_timer_t = delegate<void (long, uint32_t)>;
 
         dhcp_entry_onMAC_t m_dhcpUmapOnMAC;
         dhcp_entry_onIP_t m_dhcpUmapOnIP;
@@ -519,10 +867,36 @@ namespace mna {
         }
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
+        int32_t tx(uint8_t* in, uint32_t inLen);
+        long timedOut(const void* txn);
+
+        void set_upstream(upstream_t us)
+        {
+          m_upstream = us;
+        }
+
+        void set_start_timer(start_timer_t st)
+        {
+          m_start_timer = st;
+        }
+
+        void set_stop_timer(stop_timer_t st)
+        {
+          m_stop_timer = st;
+        }
+
+        void set_reset_timer(reset_timer_t rt)
+        {
+          m_reset_timer = rt;
+        }
 
       private:
 
-        upstream_delegate_t upstream;
+        start_timer_t m_start_timer;
+        stop_timer_t m_stop_timer;
+        reset_timer_t m_reset_timer;
+
+        upstream_t m_upstream;
         /* The Router IP for DHCP Client. */
         uint32_t m_routerIP;
         /* The Domain Name Server IP. */
