@@ -204,7 +204,9 @@ namespace mna {
       uint32_t tot_len:16;
 
       uint16_t id;
-      uint16_t flags;
+      /*Fragment Offset.*/
+      uint16_t offset:13;
+      uint16_t flags:3;
 
       uint32_t ttl:8;
       uint32_t proto:8;

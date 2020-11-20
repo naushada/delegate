@@ -300,7 +300,7 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
 
           case mna::ipv4::TCP: {
 
-            mna::transport::TCP* pTCP = (mna::transport::TCP* )&pIP[sizeof(mna::transport::TCP)];
+            mna::transport::TCP* pTCP = (mna::transport::TCP* )&pIP[sizeof(mna::ipv4::IP)];
             //ip().set_upstream(mna::transport::tcp::upstream_t::from(tcp(), &mna::transport::tcp::rx));
             switch(ntohs(pTCP->dest_port)) {
               case mna::transport::HTTP: {
@@ -330,8 +330,9 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
 
           case mna::ipv4::UDP: {
             ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the porotocol is UDP \n")));
+
             ip().set_upstream(mna::transport::udp::upstream_t::from(udp(), &mna::transport::udp::rx));
-            mna::transport::UDP* pUDP = (mna::transport::UDP* )&pIP[sizeof(mna::transport::UDP)];
+            mna::transport::UDP* pUDP = (mna::transport::UDP* )&in[sizeof(mna::eth::ETH) + sizeof(mna::ipv4::IP)];
 
             switch(ntohs(pUDP->dest_port)) {
 
