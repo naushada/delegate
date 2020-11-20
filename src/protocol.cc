@@ -664,6 +664,34 @@ int32_t mna::ipv4::ip::rx(const uint8_t* in, uint32_t inLen)
   return(m_upstream(&in[len], (inLen - len)));
 }
 
+uint16_t mna::ipv4::ip::checksum(const uint16_t* in, size_t inLen) const
+{
+  uint32_t sum = 0;
+
+  while(inLen > 1) {
+
+    sum += *in++;
+    if(sum & 0x80000000) {
+      sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    inLen -= 2;
+  }
+
+  /*pkt_len is an odd*/
+  if(inLen) {
+    sum += (uint32_t ) *(uint8_t *)in;
+  }
+
+  /*wrapping up into 2 bytes*/
+  while(sum >> 16) {
+    sum = (sum & 0xFFFF) + (sum >> 16);
+  }
+
+  /*1's complement*/
+  return (~sum);
+}
+
 int32_t mna::transport::udp::rx(const uint8_t* in, uint32_t inLen)
 {
   mna::transport::UDP* pUDP = (mna::transport::UDP* )in;
@@ -672,6 +700,79 @@ int32_t mna::transport::udp::rx(const uint8_t* in, uint32_t inLen)
 
   std::cout << "udp::receive "<< std::endl;
   return(m_upstream(&in[sizeof(mna::transport::UDP)], (inLen - sizeof(mna::transport::UDP))));
+}
+
+uint16_t mna::transport::udp::build_pseudo(uint8_t* in) const
+{
+  uint8_t* pseudoPtr = nullptr;
+  size_t ipHdrLen = 0;
+  size_t tmpLen = 0;
+  size_t offset = 0;
+  uint16_t chksum = 0;
+  mna::ipv4::IP* ip = (mna::ipv4::IP* )in;
+
+  ipHdrLen = (ip->len * 4);
+  /*Removing IP Header size and adding UDP PSEUDO Header in size.*/
+  tmpLen = (ntohs(ip->tot_len) - ipHdrLen) + sizeof(mna::transport::PHDR);
+  pseudoPtr = new uint8_t[tmpLen];
+
+  std::memset((void *)pseudoPtr, 0, tmpLen);
+
+  /*pseudo Header for UDP - to compute checksum*/
+  *((uint32_t *)&pseudoPtr[offset]) = ip->src_ip;
+  offset += sizeof(uint32_t);
+
+  *((uint32_t *)&pseudoPtr[offset]) = ip->dest_ip;
+  offset += sizeof(uint32_t);
+
+  /*reserved Byte*/
+  pseudoPtr[offset] = 0;
+  offset += 1;
+  /*Protocol UDP*/
+  pseudoPtr[offset] = mna::ipv4::UDP;
+  offset += 1;
+  /*length of UDP Header + Payload.*/
+  pseudoPtr[offset] = htons(ntohs(ip->tot_len) - ipHdrLen);
+  offset += 2;
+
+  std::memcpy((void *)&pseudoPtr[offset],
+              (const void *)&ip[ipHdrLen],
+              (ntohs(ip->tot_len) - ipHdrLen));
+
+  offset += ntohs(ip->tot_len) - ipHdrLen;
+
+  chksum = checksum((uint16_t*)pseudoPtr, offset);
+
+  delete []pseudoPtr;
+  return(chksum);
+}
+
+uint16_t mna::transport::udp::checksum(const uint16_t* in, size_t inLen) const
+{
+  uint32_t sum = 0;
+
+  while(inLen > 1) {
+
+    sum += *in++;
+    if(sum & 0x80000000) {
+      sum = (sum & 0xFFFF) + (sum >> 16);
+    }
+
+    inLen -= 2;
+  }
+
+  /*pkt_len is an odd*/
+  if(inLen) {
+    sum += (uint32_t ) *(uint8_t *)in;
+  }
+
+  /*wrapping up into 2 bytes*/
+  while(sum >> 16) {
+    sum = (sum & 0xFFFF) + (sum >> 16);
+  }
+
+  /*1's complement*/
+  return (~sum);
 }
 
 #endif /* __PROTOCOL_CC__ */

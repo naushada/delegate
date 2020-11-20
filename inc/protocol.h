@@ -129,6 +129,7 @@ namespace mna {
     class ether {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
 
         ether(const std::string& intf) : m_intf(intf)
         {
@@ -141,6 +142,7 @@ namespace mna {
         ~ether() = default;
 
         int32_t rx(const uint8_t* ethPacket, uint32_t packetLen);
+        int32_t tx(uint8_t* ethPacket, uint32_t packetLen);
 
         void set_upstream(upstream_t us)
         {
@@ -184,6 +186,7 @@ namespace mna {
 
       private:
         upstream_t m_upstream;
+        downstream_t m_downstream;
         std::string m_intf;
         uint32_t m_index;
         std::array<uint8_t, 6> m_src_mac;
@@ -221,6 +224,7 @@ namespace mna {
     class ip {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
 
         ip() = default;
         ip(const ip& ) = default;
@@ -228,6 +232,8 @@ namespace mna {
         ~ip() = default;
 
         int32_t rx(const uint8_t* ip, uint32_t ipLen);
+        int32_t tx(uint8_t* ip, uint32_t ipLen);
+        uint16_t checksum(const uint16_t* in, size_t inLen) const;
 
         void set_upstream(upstream_t us)
         {
@@ -256,6 +262,7 @@ namespace mna {
 
       private:
         upstream_t m_upstream;
+        downstream_t m_downstream;
         uint32_t m_src_ip;
         uint32_t m_dst_ip;
     };
@@ -318,6 +325,7 @@ namespace mna {
     class udp {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
 
         udp() = default;
         udp(const udp& ) = default;
@@ -325,6 +333,9 @@ namespace mna {
         ~udp() = default;
 
         int32_t rx(const uint8_t* udp, uint32_t udpLen);
+        int32_t tx(uint8_t* ip, uint32_t ipLen);
+        uint16_t checksum(const uint16_t* in, size_t inLen) const;
+        uint16_t build_pseudo(uint8_t* in) const;
 
         void set_upstream(upstream_t us)
         {
@@ -353,6 +364,7 @@ namespace mna {
 
       private:
         upstream_t m_upstream;
+        downstream_t m_downstream;
         uint16_t m_src_port;
         uint16_t m_dst_port;
     };
@@ -360,6 +372,7 @@ namespace mna {
     class tcp {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
 
         tcp() = default;
         tcp(const tcp& ) = default;
@@ -367,6 +380,7 @@ namespace mna {
         ~tcp() = default;
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
+        int32_t tx(uint8_t* in, uint32_t inLen);
 
         void set_upstream(upstream_t us)
         {
@@ -395,6 +409,7 @@ namespace mna {
 
       private:
         upstream_t m_upstream;
+        downstream_t m_downstream;
         uint16_t m_src_port;
         uint16_t m_dst_port;
     };
@@ -852,7 +867,9 @@ namespace mna {
         }
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
+        int32_t tx(uint8_t* in, uint32_t inLen);
         long timedOut(const void* txn);
+
         void set_upstream(upstream_t us)
         {
           m_upstream = us;
