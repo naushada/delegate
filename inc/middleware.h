@@ -33,6 +33,7 @@ namespace mna {
 
       using timer_delegate_t = delegate<long (const void*)>;
       using upstream_delegate_t = delegate<int32_t (const uint8_t*, uint32_t)>;
+      using downstream_delegate_t = delegate<int32_t (uint8_t*, size_t)>;
 
       /** This ctor is invoked when instantiated with non-const string.*/
       middleware(std::string& intf)
@@ -120,8 +121,18 @@ namespace mna {
         m_rx_dispatch = rx;
       }
 
+      downstream_delegate_t get_tx_dispatch()
+      {
+        return(m_tx_dispatch);
+      }
+
+      void set_tx_dispatch(downstream_delegate_t tx)
+      {
+        m_tx_dispatch = tx;
+      }
+
       int32_t rx(const uint8_t*, uint32_t);
-      int32_t tx(uint8_t*, uint32_t);
+      int32_t tx(uint8_t*, size_t);
 
       mna::dhcp::server& dhcp() const
       {
@@ -154,6 +165,7 @@ namespace mna {
       ACE_SOCK_Dgram m_sock_dgram;
       /* upstream interface to */
       upstream_delegate_t m_rx_dispatch;
+      downstream_delegate_t m_tx_dispatch;
       /*! runnining number for timerID */
       long m_tid;
 

@@ -289,7 +289,9 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
       case mna::eth::IPv4: {
 
         mna::ipv4::IP* pIP = (mna::ipv4::IP* )&in[sizeof(mna::eth::ETH)];
+        /* setting up/down stream for packet inflow/outflow. */
         eth().set_upstream(mna::ipv4::ip::upstream_t::from(ip(), &mna::ipv4::ip::rx));
+        eth().set_downstream(mna::middleware::downstream_delegate_t::from(*this, &mna::middleware::tx));
 
         switch(pIP->proto) {
           case mna::ipv4::ICMP: {
@@ -300,9 +302,11 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
 
           case mna::ipv4::TCP: {
 
-            mna::transport::TCP* pTCP = (mna::transport::TCP* )&pIP[sizeof(mna::ipv4::IP)];
+            mna::transport::TCP* pTCP = (mna::transport::TCP* )&in[sizeof(mna::eth::ETH) + sizeof(mna::ipv4::IP)];
             //ip().set_upstream(mna::transport::tcp::upstream_t::from(tcp(), &mna::transport::tcp::rx));
+            //ip().set_downstream(mna::transport::tcp::downstream_t::from(tcp(), &mna::transport::tcp::tx));
             switch(ntohs(pTCP->dest_port)) {
+
               case mna::transport::HTTP: {
                 ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the HTTP is %u\n"), 80));
                 break;
@@ -332,6 +336,8 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
             ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the porotocol is UDP \n")));
 
             ip().set_upstream(mna::transport::udp::upstream_t::from(udp(), &mna::transport::udp::rx));
+            ip().set_downstream(mna::eth::ether::downstream_t::from(eth(), &mna::eth::ether::tx));
+
             mna::transport::UDP* pUDP = (mna::transport::UDP* )&in[sizeof(mna::eth::ETH) + sizeof(mna::ipv4::IP)];
 
             switch(ntohs(pUDP->dest_port)) {
@@ -340,6 +346,7 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
 
                 ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the DHCP dest_port is %u\n"), ntohs(pUDP->dest_port)));
                 udp().set_upstream(mna::dhcp::server::upstream_t::from(dhcp(), &mna::dhcp::server::rx));
+                udp().set_downstream(mna::ipv4::ip::downstream_t::from(ip(), &mna::ipv4::ip::tx));
 
                 /*Updating timers' member function.*/
                 dhcp().set_start_timer(mna::dhcp::server::start_timer_t::from(*this, &mna::middleware::start_timer));
@@ -394,8 +401,16 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
   return(0);
 }
 
-int32_t mna::middleware::tx(uint8_t* out, uint32_t inLen)
+int32_t mna::middleware::tx(uint8_t* out, size_t outLen)
 {
+  size_t idx;
+  for(idx = 0; idx < outLen; ++idx) {
+    std::cout <<std::hex << out[idx] << " ";
+    if(!(idx %16)) {
+      std::cout << std::endl;
+    }
+  }
+
   return(0);
 }
 

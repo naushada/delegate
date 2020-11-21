@@ -129,7 +129,7 @@ namespace mna {
     class ether {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
-        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, size_t)>;
 
         ether(const std::string& intf) : m_intf(intf)
         {
@@ -142,7 +142,8 @@ namespace mna {
         ~ether() = default;
 
         int32_t rx(const uint8_t* ethPacket, uint32_t packetLen);
-        int32_t tx(uint8_t* ethPacket, uint32_t packetLen);
+        int32_t tx(uint8_t* ethPacket, size_t packetLen);
+        uint16_t checksum(const uint16_t* in, size_t inLen) const;
 
         void set_upstream(upstream_t us)
         {
@@ -152,6 +153,16 @@ namespace mna {
         upstream_t& get_upstream()
         {
           return(m_upstream);
+        }
+
+        void set_downstream(downstream_t ds)
+        {
+          m_downstream = ds;
+        }
+
+        downstream_t& get_downstream()
+        {
+          return(m_downstream);
         }
 
         void src_mac(std::array<uint8_t, 6> smac)
@@ -184,6 +195,16 @@ namespace mna {
           return(m_index);
         }
 
+        uint16_t proto()
+        {
+          return(m_proto);
+        }
+
+        void proto(uint16_t pro)
+        {
+          m_proto = pro;
+        }
+
       private:
         upstream_t m_upstream;
         downstream_t m_downstream;
@@ -191,6 +212,7 @@ namespace mna {
         uint32_t m_index;
         std::array<uint8_t, 6> m_src_mac;
         std::array<uint8_t, 6> m_dst_mac;
+        uint16_t m_proto;
     };
 
   }
@@ -226,7 +248,7 @@ namespace mna {
     class ip {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
-        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, size_t)>;
 
         ip() = default;
         ip(const ip& ) = default;
@@ -234,12 +256,23 @@ namespace mna {
         ~ip() = default;
 
         int32_t rx(const uint8_t* ip, uint32_t ipLen);
-        int32_t tx(uint8_t* ip, uint32_t ipLen);
+        int32_t tx(uint8_t* ip, size_t ipLen);
         uint16_t checksum(const uint16_t* in, size_t inLen) const;
+        uint16_t compute_checksum(uint8_t* in, size_t inLen);
 
         void set_upstream(upstream_t us)
         {
           m_upstream = us;
+        }
+
+        void set_downstream(downstream_t ds)
+        {
+          m_downstream = ds;
+        }
+
+        downstream_t& get_downstream()
+        {
+          return(m_downstream);
         }
 
         void src_ip(uint32_t sip)
@@ -262,11 +295,24 @@ namespace mna {
           return(m_dst_ip);
         }
 
+        void proto(uint8_t pro)
+        {
+          m_proto = pro;
+        }
+
+        uint8_t proto() const
+        {
+          return(m_proto);
+        }
+
       private:
+
         upstream_t m_upstream;
         downstream_t m_downstream;
+
         uint32_t m_src_ip;
         uint32_t m_dst_ip;
+        uint8_t m_proto;
     };
 
   }
@@ -327,7 +373,7 @@ namespace mna {
     class udp {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
-        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, size_t)>;
 
         udp() = default;
         udp(const udp& ) = default;
@@ -335,13 +381,21 @@ namespace mna {
         ~udp() = default;
 
         int32_t rx(const uint8_t* udp, uint32_t udpLen);
-        int32_t tx(uint8_t* ip, uint32_t ipLen);
-        uint16_t checksum(const uint16_t* in, size_t inLen) const;
-        uint16_t build_pseudo(uint8_t* in) const;
+        int32_t tx(uint8_t* ip, size_t ipLen);
 
         void set_upstream(upstream_t us)
         {
           m_upstream = us;
+        }
+
+        void set_downstream(downstream_t ds)
+        {
+          m_downstream = ds;
+        }
+
+        downstream_t& get_downstream()
+        {
+          return(m_downstream);
         }
 
         void src_port(uint16_t port)
@@ -374,7 +428,7 @@ namespace mna {
     class tcp {
       public:
         using upstream_t = delegate<int32_t (const uint8_t*, uint32_t)>;
-        using downstream_t = delegate<int32_t (uint8_t*, uint32_t)>;
+        using downstream_t = delegate<int32_t (uint8_t*, size_t)>;
 
         tcp() = default;
         tcp(const tcp& ) = default;
@@ -382,11 +436,21 @@ namespace mna {
         ~tcp() = default;
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
-        int32_t tx(uint8_t* in, uint32_t inLen);
+        int32_t tx(uint8_t* in, size_t inLen);
 
         void set_upstream(upstream_t us)
         {
           m_upstream = us;
+        }
+
+        void set_downstream(downstream_t ds)
+        {
+          m_downstream = ds;
+        }
+
+        downstream_t& get_downstream()
+        {
+          return(m_downstream);
         }
 
         void src_port(uint16_t port)
@@ -702,6 +766,8 @@ namespace mna {
 
     class dhcpEntry {
       public:
+        using downstream_t = delegate<int32_t (uint8_t* in, size_t inLen)>;
+
         using start_timer_t = delegate<long (uint32_t, const void*, bool)>;
         using stop_timer_t = delegate<void (long)>;
         using reset_timer_t = delegate<void (long, uint32_t)>;
@@ -754,7 +820,7 @@ namespace mna {
 
         int32_t parseOptions(const uint8_t* in, uint32_t inLen);
         int32_t buildAndSendResponse(const uint8_t* in, uint32_t inLen);
-        int32_t tx(uint8_t* out, uint32_t outLen);
+        int32_t tx(uint8_t* out, size_t outLen);
 
         /** Timer related API. */
         long startTimer(uint32_t delay, const void* txn);
@@ -805,6 +871,15 @@ namespace mna {
           m_reset_timer = rt;
         }
 
+        void set_downstream(downstream_t ds)
+        {
+          m_downstream = ds;
+        }
+
+        downstream_t& get_downstream()
+        {
+          return(m_downstream);
+        }
 
       private:
 
@@ -812,6 +887,7 @@ namespace mna {
         stop_timer_t m_stop_timer;
         reset_timer_t m_reset_timer;
 
+        downstream_t m_downstream;
         /* Per DHCP Client State Machine. */
         FSM* m_fsm;
         /*backpointer to dhcp server.*/
@@ -848,6 +924,8 @@ namespace mna {
       public:
 
         using upstream_t = delegate<int32_t (const uint8_t* in, uint32_t inLen)>;
+        using downstream_t = delegate<int32_t (uint8_t* in, size_t inLen)>;
+
         using start_timer_t = delegate<long (uint32_t, const void*, bool)>;
         using stop_timer_t = delegate<void (long)>;
         using reset_timer_t = delegate<void (long, uint32_t)>;
@@ -869,7 +947,7 @@ namespace mna {
         }
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
-        int32_t tx(uint8_t* in, uint32_t inLen);
+        int32_t tx(uint8_t* in, size_t inLen);
         long timedOut(const void* txn);
 
         void set_upstream(upstream_t us)
@@ -892,6 +970,16 @@ namespace mna {
           m_reset_timer = rt;
         }
 
+        void set_downstream(downstream_t ds)
+        {
+          m_downstream = ds;
+        }
+
+        downstream_t& get_downstream()
+        {
+          return(m_downstream);
+        }
+
       private:
 
         start_timer_t m_start_timer;
@@ -899,6 +987,7 @@ namespace mna {
         reset_timer_t m_reset_timer;
 
         upstream_t m_upstream;
+        downstream_t m_downstream;
         /* The Router IP for DHCP Client. */
         uint32_t m_routerIP;
         /* The Domain Name Server IP. */
