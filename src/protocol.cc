@@ -632,10 +632,11 @@ long mna::dhcp::server::timedOut(const void* txn)
 }
 
 /**
- * @brief
- * @param
- * @param
- * @return
+ * @brief this member method receives ethernet packet from lower layer and learns source/destination mac and protocol and stripped off
+ *        ethernet Header and passes on to upper layer.
+ * @param pointer to const byte buffer, received from lower layer
+ * @param length of packet received from lower layer
+ * @return upon success 0 else less than 0
  * */
 int32_t mna::eth::ether::rx(const uint8_t* in, uint32_t inLen)
 {
@@ -649,6 +650,12 @@ int32_t mna::eth::ether::rx(const uint8_t* in, uint32_t inLen)
   return(m_upstream(&in[sizeof(mna::eth::ETH)], (inLen - sizeof(mna::eth::ETH))));
 }
 
+/**
+ * @brief This member method receives IP packet from upper layer and computes the IP Header's checksum, prepend the
+ *        Ethernet Header and passes to lower layer.
+ * @param pointer to received byte buffer from upper layer with IP Header
+ * @param length of received packet from upper layer
+ * @return upon success 0 else less than 0.*/
 int32_t mna::eth::ether::tx(uint8_t* out, size_t outLen)
 {
   uint8_t rsp[1024];
@@ -672,6 +679,11 @@ int32_t mna::eth::ether::tx(uint8_t* out, size_t outLen)
   return(get_downstream()(rsp, outLen));
 }
 
+/**
+ * @brief This member function computes the checksum of packet received from upper layer.
+ * @param pointer to const byte buffer received from upper layer.
+ * @param length of packet received from upper layer.
+ * @return 2Bytes checksum.*/
 uint16_t mna::eth::ether::checksum(const uint16_t* in, size_t inLen) const
 {
   uint32_t sum = 0;
@@ -700,6 +712,12 @@ uint16_t mna::eth::ether::checksum(const uint16_t* in, size_t inLen) const
   return (~sum);
 }
 
+/**
+ * @brief This member method receives byte buffer from lower layer with IP Header and it learns source & destination IP and protocol
+ *        and stripped off IP Header from received packet and passes to upper layer.
+ * @param pointer to const byte buffer received from lower layer
+ * @param length of received packet
+ * @return upon success 0 else less than 0.*/
 int32_t mna::ipv4::ip::rx(const uint8_t* in, uint32_t inLen)
 {
   mna::ipv4::IP* pIP = (mna::ipv4::IP* )in;
@@ -714,6 +732,12 @@ int32_t mna::ipv4::ip::rx(const uint8_t* in, uint32_t inLen)
   return(m_upstream(&in[len], (inLen - len)));
 }
 
+/**
+ * @brief This member function receives the byte buffer from upper layer and computes the UDP checksum
+ *        and then prefix the IP Header to received packet
+ * @param pointer to byte buffer received from upper layer
+ * @param length of packet received from upper layer
+ * @return upon success 0 else less than 0*/
 int32_t mna::ipv4::ip::tx(uint8_t* out, size_t outLen)
 {
   uint8_t rsp[1024];
@@ -744,6 +768,12 @@ int32_t mna::ipv4::ip::tx(uint8_t* out, size_t outLen)
   return(get_downstream()(rsp, outLen));
 }
 
+/**
+ * @brief This member function prefix PSEUDO Header packet received from upper layer and computes
+ *        the checksum.
+ * @param pointer to byte buffer received from upper layer.
+ * @param length of received byte buffer from upper layer.
+ * @return 2Bytes checksum*/
 uint16_t mna::ipv4::ip::compute_checksum(uint8_t* in, size_t inLen)
 {
   uint8_t rsp[1024];
@@ -764,6 +794,11 @@ uint16_t mna::ipv4::ip::compute_checksum(uint8_t* in, size_t inLen)
   return(checksum((uint16_t*)rsp, (inLen + sizeof(mna::transport::PHDR))));
 }
 
+/**
+ * @brief This member function computes the checksum of packet received from upper layer.
+ * @param pointer to const byte buffer received from upper layer.
+ * @param length of packet received from upper layer.
+ * @return 2Bytes checksum.*/
 uint16_t mna::ipv4::ip::checksum(const uint16_t* in, size_t inLen) const
 {
   uint32_t sum = 0;
@@ -792,6 +827,12 @@ uint16_t mna::ipv4::ip::checksum(const uint16_t* in, size_t inLen) const
   return (~sum);
 }
 
+/**
+ * @brief This member method receives byte buffer from lower layer with UDP Header and it learns 
+ *        source & destination port and stripped UDP Header and passes to upper layer.
+ * @param pointer to const byte buffer from lower layer.
+ * @param length of received packet.
+ * @return upon success 0 else less than 0.*/
 int32_t mna::transport::udp::rx(const uint8_t* in, uint32_t inLen)
 {
   mna::transport::UDP* pUDP = (mna::transport::UDP* )in;
@@ -802,6 +843,12 @@ int32_t mna::transport::udp::rx(const uint8_t* in, uint32_t inLen)
   return(m_upstream(&in[sizeof(mna::transport::UDP)], (inLen - sizeof(mna::transport::UDP))));
 }
 
+/**
+ * @brief This member function receives the application payload and prepend the UDP
+ *        Header. The UDP Header Length is included along with received length from upper layer.
+ * @param Pointer to upper layer byte buffer.
+ * @param length of received byte buffer
+ * @return upon success returns 0 else less than 0.*/
 int32_t mna::transport::udp::tx(uint8_t* out, size_t outLen)
 {
   uint8_t rsp[1024];
