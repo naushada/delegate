@@ -657,7 +657,7 @@ int32_t mna::eth::ether::tx(uint8_t* out, size_t outLen)
 
   std::memset((void*)rsp, 0, sizeof(rsp));
 
-  pIP->chksum = checksum((const uint16_t*)out, outLen);
+  pIP->chksum = checksum((const uint16_t*)out, (sizeof(uint32_t) * pIP->len));
 
   /*Populate Ethernet Header now.*/
   std::memcpy((void*)pETH->dest, src_mac().data(), sizeof(pETH->dest));
