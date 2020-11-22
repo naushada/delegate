@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstring>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 namespace mna {
   class FSM {
@@ -227,8 +228,7 @@ namespace mna {
 
       uint16_t id;
       /*Fragment Offset.*/
-      uint16_t offset:13;
-      uint16_t flags:3;
+      uint16_t flags;
 
       uint32_t ttl:8;
       uint32_t proto:8;
@@ -800,7 +800,9 @@ namespace mna {
           std::swap(m_mtu, mtu);
           std::swap(m_serverID, serverID);
           std::swap(m_domainName, domainName);
-
+          char hname[255];
+          gethostname(hname, sizeof(hname));
+          m_hostName.assign((const char* )hname);
           /* Initializing the State Machine. */
           setState(OnDiscover::instance());
         }
@@ -933,9 +935,17 @@ namespace mna {
         dhcp_entry_onMAC_t m_dhcpUmapOnMAC;
         dhcp_entry_onIP_t m_dhcpUmapOnIP;
 
-        server() = default;
         server(const server& ) = default;
         server(server&& ) = default;
+
+        server()
+        {
+          m_lease = 100;
+          m_mtu = 1500;
+          m_dnsIP = 0x08080404;
+          m_serverID = 0x01020304;
+          m_domainName.assign("www.example.com", 15);
+        }
 
         ~server()
         {
@@ -947,7 +957,6 @@ namespace mna {
         }
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
-        int32_t tx(uint8_t* in, size_t inLen);
         long timedOut(const void* txn);
 
         void set_upstream(upstream_t us)

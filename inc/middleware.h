@@ -68,6 +68,7 @@ namespace mna {
         ACE_NEW_NORETURN(m_et, mna::eth::ether(m_intf.c_str()));
       }
 
+      middleware() = default;
       middleware(const middleware& ) = default;
       middleware(middleware&& ) = default;
 
@@ -98,8 +99,6 @@ namespace mna {
       ACE_HANDLE open_and_bind_intf();
 
       ACE_INT32 get_index();
-
-      static middleware* instance();
 
       void set_timer_dispatch(timer_delegate_t tmr)
       {
@@ -156,8 +155,6 @@ namespace mna {
 
     private:
 
-      middleware() = default;
-      static middleware* m_instance;
       std::string m_intf;
       /*! socket fd */
       ACE_HANDLE m_handle;

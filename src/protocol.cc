@@ -68,14 +68,14 @@ void mna::dhcp::OnRequest::onEntry(void* parent)
   std::cout << "5.OnRequest::onEntry is invoked & Timer is started" << std::endl;
   std::string data((const char* )dEnt->get_chaddr().data(), 6);
   //dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )dEnt->get_chaddr().data()));
-  dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )data.c_str()));
+  //dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )data.c_str()));
 }
 
 void mna::dhcp::OnRequest::onExit(void* parent)
 {
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRequest::onExit is invoked " << std::endl;
-  dEnt->stopTimer(dEnt->get_tid());
+  //dEnt->stopTimer(dEnt->get_tid());
 }
 
 int32_t mna::dhcp::OnRequest::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
@@ -130,7 +130,7 @@ void mna::dhcp::OnRelease::onEntry(void* parent)
   std::cout << "5.OnRelease::onEntry is invoked & timer is started" << std::endl;
   std::string data((const char* )dEnt->get_chaddr().data(), 6);
   //dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )dEnt->get_chaddr().data()));
-  dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )data.c_str()));
+  //dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )data.c_str()));
   //dEnt->set_tid(dEnt->startTimer(dEnt->get_lease(), (const void* )dEnt->get_chaddr().data()));
 }
 
@@ -138,7 +138,7 @@ void mna::dhcp::OnRelease::onExit(void* parent)
 {
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRelease::onExit is invoked & timer is stopped" << std::endl;
-  dEnt->stopTimer(dEnt->get_tid());
+  //dEnt->stopTimer(dEnt->get_tid());
 }
 
 int32_t mna::dhcp::OnRelease::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
@@ -252,6 +252,7 @@ void mna::dhcp::dhcpEntry::stopTimer(long tid)
 
 int32_t mna::dhcp::dhcpEntry::tx(uint8_t* out, size_t outLen)
 {
+  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
   return(get_downstream()(out, outLen));
 }
 
@@ -394,14 +395,6 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
           offset += m_domainName.length();
           break;
 
-        case mna::dhcp::MTU:
-          rsp[offset++] = mna::dhcp::MTU;
-          rsp[offset++] = 2;
-          /*Host Machine Name to be updated.*/;
-          *((uint16_t*)&rsp[offset]) = htons(m_mtu);
-          offset += 2;
-          break;
-
         case mna::dhcp::BROADCAST_ADDRESS:
           rsp[offset++] = mna::dhcp::BROADCAST_ADDRESS;
           rsp[offset++] = 4;
@@ -489,6 +482,7 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
 
   rsp[offset++] = mna::dhcp::END;
 
+  std::cout << "DHCP PAYLOAD Length " << offset << std::endl;
   return(tx(rsp, offset));
 }
 
@@ -621,11 +615,6 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 
 }
 
-int32_t mna::dhcp::server::tx(uint8_t* out, size_t outLen)
-{
-  return(get_downstream()(out, outLen));
-}
-
 long mna::dhcp::server::timedOut(const void* txn)
 {
   std::cout << "timedOut is invoked " << std::endl;
@@ -666,7 +655,7 @@ int32_t mna::eth::ether::tx(uint8_t* out, size_t outLen)
   mna::eth::ETH* pETH = (mna::eth::ETH* )rsp;
   mna::ipv4::IP* pIP = (mna::ipv4::IP* )out;
 
-  std::memcpy((void*)rsp, 0, sizeof(rsp));
+  std::memset((void*)rsp, 0, sizeof(rsp));
 
   pIP->chksum = checksum((const uint16_t*)out, outLen);
 
@@ -677,7 +666,10 @@ int32_t mna::eth::ether::tx(uint8_t* out, size_t outLen)
 
   std::memcpy((void*)&rsp[sizeof(mna::eth::ETH)], out, outLen);
 
-  return(get_downstream()(rsp, (outLen + sizeof(mna::eth::ETH))));
+  outLen += sizeof(mna::eth::ETH);
+  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
+
+  return(get_downstream()(rsp, outLen));
 }
 
 uint16_t mna::eth::ether::checksum(const uint16_t* in, size_t inLen) const
@@ -687,7 +679,7 @@ uint16_t mna::eth::ether::checksum(const uint16_t* in, size_t inLen) const
   while(inLen > 1) {
 
     sum += *in++;
-    if(sum & 0x80000000) {
+    if(sum & 0x80000000U) {
       sum = (sum & 0xFFFF) + (sum >> 16);
     }
 
@@ -716,6 +708,7 @@ int32_t mna::ipv4::ip::rx(const uint8_t* in, uint32_t inLen)
   uint32_t len = pIP->len * 4;
   src_ip(pIP->src_ip);
   dst_ip(pIP->dest_ip);
+  proto(pIP->proto);
 
   std::cout << "ip::receive len "<< pIP->len << " src_ip " << std::hex << src_ip() << " dst_ip " << std::hex << dst_ip() << std::endl;
   return(m_upstream(&in[len], (inLen - len)));
@@ -734,14 +727,21 @@ int32_t mna::ipv4::ip::tx(uint8_t* out, size_t outLen)
   /*Populate IP Header now.*/
   pIP->len = 5;
   pIP->ver = 4;
-  pIP->tot_len = htons(outLen);
   pIP->src_ip = dst_ip();
   pIP->dest_ip = src_ip();
   pIP->proto = proto();
-  pIP->flags = 01;
+  /*DF - Don't Fragment.*/
+  pIP->flags = htons(1 << 14);
+  pIP->ttl = 64;
 
   std::memcpy((void *)&rsp[sizeof(mna::ipv4::IP)], out, outLen);
-  return(get_downstream()(rsp, (outLen + sizeof(mna::ipv4::IP))));
+
+  outLen += sizeof(mna::ipv4::IP);
+  /*This includes IP Header length as well. */
+  pIP->tot_len = htons(outLen);
+
+  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
+  return(get_downstream()(rsp, outLen));
 }
 
 uint16_t mna::ipv4::ip::compute_checksum(uint8_t* in, size_t inLen)
@@ -751,8 +751,8 @@ uint16_t mna::ipv4::ip::compute_checksum(uint8_t* in, size_t inLen)
 
   std::memset((void *)rsp, 0, sizeof(rsp));
   /*Populating pseudo header now.*/
-  pseudoPtr->src_ip = src_ip();
-  pseudoPtr->dest_ip = dst_ip();
+  pseudoPtr->src_ip = dst_ip();
+  pseudoPtr->dest_ip = src_ip();
   pseudoPtr->reserve = 0;
   pseudoPtr->proto = proto();
   pseudoPtr->total_len = htons(inLen);
@@ -762,7 +762,6 @@ uint16_t mna::ipv4::ip::compute_checksum(uint8_t* in, size_t inLen)
               inLen);
 
   return(checksum((uint16_t*)rsp, (inLen + sizeof(mna::transport::PHDR))));
-
 }
 
 uint16_t mna::ipv4::ip::checksum(const uint16_t* in, size_t inLen) const
@@ -810,16 +809,20 @@ int32_t mna::transport::udp::tx(uint8_t* out, size_t outLen)
   std::memset((void *)rsp, 0, sizeof(rsp));
   mna::transport::UDP* pUDP = (mna::transport::UDP* )rsp;
 
-  pUDP->src_port = src_port();
-  pUDP->dest_port = dst_port();
-  pUDP->len = outLen;
+
+  pUDP->src_port = dst_port();
+  pUDP->dest_port = src_port();
   /* checksum will be calculated latter.*/
   pUDP->chksum = 0;
 
   /*copying the payload now.*/
   std::memcpy((void *)&rsp[sizeof(mna::transport::UDP)], out, outLen);
-  outLen += sizeof(mna::transport::UDP);
 
+  outLen += sizeof(mna::transport::UDP);
+  /*This is including UDP Header length as well.*/
+  pUDP->len = htons(outLen);
+
+  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
   /*Response will have UDP Header + It's payload. Passes it to IP layer.*/
   return(get_downstream()(rsp, outLen));
 }

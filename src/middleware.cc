@@ -4,8 +4,6 @@
 #include "middleware.h"
 #include "protocol.h"
 
-mna::middleware* mna::middleware::m_instance = nullptr;
-
 /*
  * @brief  This is the hook method for application to define this member function and is invoked by
  *         ACE Framework.
@@ -17,6 +15,8 @@ ACE_INT32 mna::middleware::handle_input(ACE_HANDLE handle)
   ACE_Message_Block *mb = nullptr;
   ACE_INET_Addr peer;
   size_t recv_len = -1;
+  struct sockaddr_ll sa;
+  int addr_len = sizeof(sa);
 
   ACE_NEW_RETURN(mb, ACE_Message_Block(mna::SIZE_1MB), -1);
 
@@ -24,7 +24,7 @@ ACE_INT32 mna::middleware::handle_input(ACE_HANDLE handle)
   {
     ACE_OS::memset((void *)mb->wr_ptr(), 0, mna::SIZE_1MB);
 
-    if(!(recv_len = m_sock_dgram.recv(mb->wr_ptr(), mna::SIZE_1MB, peer)))
+    if(!(recv_len = ACE_OS::recvfrom(m_handle, mb->wr_ptr(), mna::SIZE_1MB, 0, (struct sockaddr *)&sa, &addr_len)))
     {
       ACE_ERROR((LM_ERROR, "Receive from peer 0x%X Failed\n", peer.get_port_number()));
       break;
@@ -139,15 +139,6 @@ long mna::middleware::process_timeout(const void *act)
   ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l In process_timeout %u\n"), act));
   get_timer_dispatch()(act);
   return(0);
-}
-
-mna::middleware* mna::middleware::instance()
-{
-  if(!m_instance) {
-    m_instance = new mna::middleware();
-  }
-
-  return(m_instance);
 }
 
 /**
@@ -336,6 +327,9 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
             ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the porotocol is UDP \n")));
 
             ip().set_upstream(mna::transport::udp::upstream_t::from(udp(), &mna::transport::udp::rx));
+
+            /*wiring downstream protocol layer for response.*/
+            udp().set_downstream(mna::ipv4::ip::downstream_t::from(ip(), &mna::ipv4::ip::tx));
             ip().set_downstream(mna::eth::ether::downstream_t::from(eth(), &mna::eth::ether::tx));
 
             mna::transport::UDP* pUDP = (mna::transport::UDP* )&in[sizeof(mna::eth::ETH) + sizeof(mna::ipv4::IP)];
@@ -346,7 +340,8 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
 
                 ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l the DHCP dest_port is %u\n"), ntohs(pUDP->dest_port)));
                 udp().set_upstream(mna::dhcp::server::upstream_t::from(dhcp(), &mna::dhcp::server::rx));
-                udp().set_downstream(mna::ipv4::ip::downstream_t::from(ip(), &mna::ipv4::ip::tx));
+                /* wiring downstream objects for response.*/
+                dhcp().set_downstream(mna::transport::udp::downstream_t::from(udp(), &mna::transport::udp::tx));
 
                 /*Updating timers' member function.*/
                 dhcp().set_start_timer(mna::dhcp::server::start_timer_t::from(*this, &mna::middleware::start_timer));
@@ -403,15 +398,22 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
 
 int32_t mna::middleware::tx(uint8_t* out, size_t outLen)
 {
-  size_t idx;
-  for(idx = 0; idx < outLen; ++idx) {
-    std::cout <<std::hex << out[idx] << " ";
-    if(!(idx %16)) {
-      std::cout << std::endl;
-    }
-  }
+  struct sockaddr_ll sa;
+  socklen_t addrLen = sizeof(sa);
+  int32_t sentLen = -1;
 
-  return(0);
+  ACE_OS::memset((void *)&sa, 0, sizeof(sa));
+
+  sa.sll_family = AF_PACKET;
+  sa.sll_protocol = htons(mna::ETH_P_ALL);
+  sa.sll_ifindex = get_index();
+  sa.sll_halen = mna::ETH_ALEN;
+
+  ACE_OS::memcpy((void *)sa.sll_addr, (void *)&out[mna::ETH_ALEN], mna::ETH_ALEN);
+
+  sentLen = sendto(m_handle, (const char *)out, outLen, 0, (struct sockaddr *)&sa, addrLen);
+
+  return(sentLen);
 }
 
 
