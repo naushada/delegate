@@ -9,6 +9,8 @@
 #include <cstring>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <mutex>
+#include <memory>
 
 namespace mna {
   class FSM {
@@ -641,9 +643,14 @@ namespace mna {
         static OnDiscover& instance()
         {
           /* NB: static variable is instantiated only once.*/
-          static OnDiscover m_instance;
-          return(m_instance);
+          std::call_once(m_flag, []() { m_instance = std::make_unique<OnDiscover>();});
+          return(*m_instance.get());
         }
+
+      private:
+
+        inline static std::once_flag  m_flag;
+        inline static std::unique_ptr<OnDiscover> m_instance;
     };
 
     class OnRequest {
@@ -665,9 +672,14 @@ namespace mna {
 
         static OnRequest& instance()
         {
-          static OnRequest m_instance;
-          return(m_instance);
+          std::call_once(m_flag, []() { m_instance = std::make_unique<OnRequest>();});
+          return(*m_instance.get());
         }
+
+      private:
+
+        inline static std::once_flag  m_flag;
+        inline static std::unique_ptr<OnRequest> m_instance;
     };
 
     class OnRelease {
@@ -688,9 +700,14 @@ namespace mna {
 
         static OnRelease& instance()
         {
-          static OnRelease m_instance;
-          return(m_instance);
+          std::call_once(m_flag, []() { m_instance = std::make_unique<OnRelease>();});
+          return(*m_instance.get());
         }
+
+      private:
+
+        inline static std::once_flag  m_flag;
+        inline static std::unique_ptr<OnRelease> m_instance;
     };
 
     class OnInform {
@@ -710,9 +727,14 @@ namespace mna {
 
         static OnInform& instance()
         {
-          static OnInform m_instance;
-          return(m_instance);
+          std::call_once(m_flag, []() { m_instance = std::make_unique<OnInform>();});
+          return(*m_instance.get());
         }
+
+      private:
+
+        inline static std::once_flag  m_flag;
+        inline static std::unique_ptr<OnInform> m_instance;
     };
 
     class OnDecline {
@@ -736,9 +758,14 @@ namespace mna {
 
         static OnLeaseExpire& instance()
         {
-          static OnLeaseExpire m_instance;
-          return(m_instance);
+          std::call_once(m_flag, []() { m_instance = std::make_unique<OnLeaseExpire>();});
+          return(*m_instance.get());
         }
+
+      private:
+
+        inline static std::once_flag  m_flag;
+        inline static std::unique_ptr<OnLeaseExpire> m_instance;
     };
 
     typedef struct {
