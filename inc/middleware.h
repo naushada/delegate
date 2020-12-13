@@ -45,10 +45,10 @@ namespace mna {
         m_handle = open_and_bind_intf();
 
         /*Creating the instance of respective protocol layer.*/
-        ACE_NEW_NORETURN(m_s, mna::dhcp::server());
-        ACE_NEW_NORETURN(m_udp, mna::transport::udp());
-        ACE_NEW_NORETURN(m_ip, mna::ipv4::ip());
-        ACE_NEW_NORETURN(m_et, mna::eth::ether(m_intf.c_str()));
+        m_s = std::make_unique<mna::dhcp::server>();
+        m_udp = std::make_unique<mna::transport::udp>();
+        m_ip = std::make_unique<mna::ipv4::ip>();
+        m_et = std::make_unique<mna::eth::ether>(m_intf.c_str());
 
       }
 
@@ -62,10 +62,10 @@ namespace mna {
         m_handle = open_and_bind_intf();
 
         /*Creating the instance of respective protocol layer.*/
-        ACE_NEW_NORETURN(m_s, mna::dhcp::server());
-        ACE_NEW_NORETURN(m_udp, mna::transport::udp());
-        ACE_NEW_NORETURN(m_ip, mna::ipv4::ip());
-        ACE_NEW_NORETURN(m_et, mna::eth::ether(m_intf.c_str()));
+        m_s = std::make_unique<mna::dhcp::server>();
+        m_udp = std::make_unique<mna::transport::udp>();
+        m_ip = std::make_unique<mna::ipv4::ip>();
+        m_et = std::make_unique<mna::eth::ether>(m_intf.c_str());
       }
 
       middleware() = default;
@@ -74,10 +74,6 @@ namespace mna {
 
       virtual ~middleware()
       {
-        delete m_s;
-        delete m_udp;
-        delete m_ip;
-        delete m_et;
       }
 
       ACE_INT32 handle_input(ACE_HANDLE handle) override;
@@ -135,22 +131,22 @@ namespace mna {
 
       mna::dhcp::server& dhcp() const
       {
-        return(*m_s);
+        return(*(m_s.get()));
       }
 
       mna::transport::udp& udp() const
       {
-        return(*m_udp);
+        return(*(m_udp.get()));
       }
 
       mna::ipv4::ip& ip() const
       {
-        return(*m_ip);
+        return(*(m_ip.get()));
       }
 
       mna::eth::ether& eth() const
       {
-        return(*m_et);
+        return(*(m_et.get()));
       }
 
     private:
@@ -170,10 +166,10 @@ namespace mna {
       timer_delegate_t m_to_dispatch;
 
       /*Pointers to layered protocol handler.*/
-      mna::dhcp::server *m_s;
-      mna::transport::udp *m_udp;
-      mna::ipv4::ip *m_ip;
-      mna::eth::ether *m_et;
+      std::unique_ptr<mna::dhcp::server> m_s;
+      std::unique_ptr<mna::transport::udp> m_udp;
+      std::unique_ptr<mna::ipv4::ip> m_ip;
+      std::unique_ptr<mna::eth::ether> m_et;
   };
 }
 

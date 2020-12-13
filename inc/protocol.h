@@ -807,7 +807,8 @@ namespace mna {
 
         dhcpEntry()
         {
-          m_fsm = new FSM(this);
+          m_fsm = std::make_unique<FSM>(this);
+          m_parent = nullptr;
         }
 
         ~dhcpEntry()
@@ -818,7 +819,7 @@ namespace mna {
         dhcpEntry(server* parent, uint32_t clientIP, uint32_t routerIP, uint32_t dnsIP,
                   uint32_t lease, uint32_t mtu, uint32_t serverID, std::string domainName)
         {
-          m_fsm = new FSM(this);
+          m_fsm = std::make_unique<FSM>(this);
           m_parent = parent;
           std::swap(m_clientIP, clientIP);
           std::swap(m_routerIP, routerIP);
@@ -836,13 +837,13 @@ namespace mna {
 
         FSM& getState() const
         {
-          return(m_fsm->getState());
+          return((*m_fsm.get()).getState());
         }
 
         template<typename C>
         void setState(C& inst)
         {
-          m_fsm->setState<C>(inst);
+          (*m_fsm.get()).setState<C>(inst);
         }
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
@@ -918,7 +919,7 @@ namespace mna {
 
         downstream_t m_downstream;
         /* Per DHCP Client State Machine. */
-        FSM* m_fsm;
+        std::unique_ptr<FSM> m_fsm;
         /*backpointer to dhcp server.*/
         server* m_parent;
         /* The IP address allocated/Offered to DHCP Client. */
