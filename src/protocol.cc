@@ -66,8 +66,18 @@ void mna::dhcp::OnRequest::onEntry(void* parent)
 {
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRequest::onEntry is invoked & Timer is started" << std::endl;
-  std::string data((const char* )dEnt->get_chaddr().data(), 6);
-  //dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )dEnt->get_chaddr().data()));
+  //std::string data((const char* )dEnt->get_chaddr().data(), 6);
+  std::unique_ptr<std::string> txn = std::make_unique<std::string>((const char* )dEnt->get_chaddr().data(), 6);
+
+  std::cout << "MAC --> "
+              << std::hex << dEnt->get_chaddr().data()[0]
+       << " " << std::hex << dEnt->get_chaddr().data()[1]
+       << " " << std::hex << dEnt->get_chaddr().data()[2]
+       << " " << std::hex << dEnt->get_chaddr().data()[3]
+       << " " << std::hex << dEnt->get_chaddr().data()[4]
+       << " " << std::hex << dEnt->get_chaddr().data()[5] << std::endl;
+
+  dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )txn.get()));
   //dEnt->set_tid(dEnt->startTimer(/*dEnt->get_lease()*/1, (const void* )data.c_str()));
 }
 
@@ -75,7 +85,7 @@ void mna::dhcp::OnRequest::onExit(void* parent)
 {
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRequest::onExit is invoked " << std::endl;
-  //dEnt->stopTimer(dEnt->get_tid());
+  dEnt->stopTimer(dEnt->get_tid());
 }
 
 int32_t mna::dhcp::OnRequest::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
@@ -138,7 +148,7 @@ void mna::dhcp::OnRelease::onExit(void* parent)
 {
   dhcpEntry *dEnt = reinterpret_cast<dhcpEntry*>(parent);
   std::cout << "5.OnRelease::onExit is invoked & timer is stopped" << std::endl;
-  //dEnt->stopTimer(dEnt->get_tid());
+  dEnt->stopTimer(dEnt->get_tid());
 }
 
 int32_t mna::dhcp::OnRelease::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
@@ -241,12 +251,14 @@ int32_t mna::dhcp::OnInform::receive(void* parent, const uint8_t* inPtr, uint32_
 
 long mna::dhcp::dhcpEntry::startTimer(uint32_t delay, const void* txn)
 {
+  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
   long tid = get_start_timer()(delay, txn, false);
   return(tid);
 }
 
 void mna::dhcp::dhcpEntry::stopTimer(long tid)
 {
+  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
   get_stop_timer()(tid);
 }
 
@@ -572,10 +584,17 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 {
   std::cout << "1.server::rx received REQ " <<std::endl;
   dhcp_entry_onMAC_t::const_iterator it;
-  dhcpEntry* dEnt = nullptr;
 
   const uint8_t *clientMAC = ((dhcp_t *)in)->chaddr;
   uint8_t len = ((dhcp_t *)in)->hlen;
+
+  std::cout << "CHADDR "
+            << std::hex << clientMAC[0] << " "
+            << std::hex << clientMAC[1] << " "
+            << std::hex << clientMAC[2] << " "
+            << std::hex << clientMAC[3] << " "
+            << std::hex << clientMAC[4] << " "
+            << std::hex << clientMAC[5] << " " << std::endl;
 
   std::string MAC = std::string((const char *)clientMAC, len);
 
@@ -585,32 +604,35 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 
     std::cout << "2.dhcpEntry Instance is found " << std::endl;
     /* DHCP Client Entry is found. */
-    dEnt = it->second;
+    dhcpEntry &dEnt = *(it->second.get());
+    dEnt.rx(in, inLen);
 
   } else {
 
     std::cout << "2.dhcpEntry instantiated " << std::endl;
     /* New DHCP Client Request, create an entry for it. */
-    dEnt = new dhcpEntry(this, 123, m_routerIP, m_dnsIP, m_lease, m_mtu, m_serverID, m_domainName);
+    std::unique_ptr<dhcpEntry> inst = std::make_unique<dhcpEntry>(this, 123, m_routerIP, m_dnsIP, m_lease, m_mtu, m_serverID, m_domainName);
+
+    dhcpEntry &dEnt = *(inst.get());
+    /* setting timer delegate */
+    dEnt.set_start_timer(m_start_timer);
+    dEnt.set_stop_timer(m_stop_timer);
+    dEnt.set_reset_timer(m_reset_timer);
+    /* setting downstream for packet transmitting. */
+    dEnt.set_downstream(m_downstream);
+
+    /* Feed to FSM now. */
+    dEnt.rx(in, inLen);
 
     /*insert into unordered_map now.*/
-    bool ret = m_dhcpUmapOnMAC.insert(std::pair<std::string, dhcpEntry*>(MAC, dEnt)).second;
+    bool ret = m_dhcpUmapOnMAC.insert(std::pair<std::string, std::unique_ptr<dhcpEntry>>(MAC, std::move(inst))).second;
 
     if(!ret) {
       std::cout << "Insertion of dhcpEntry failed " << std::endl;
     }
 
-    /* setting timer delegate */
-    dEnt->set_start_timer(m_start_timer);
-    dEnt->set_stop_timer(m_stop_timer);
-    dEnt->set_reset_timer(m_reset_timer);
-    /* setting downstream for packet transmitting. */
-    dEnt->set_downstream(m_downstream);
-
   }
 
-  /* Feed to FSM now. */
-  dEnt->rx(in, inLen);
   return(0);
 
 }
@@ -618,14 +640,30 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 long mna::dhcp::server::timedOut(const void* txn)
 {
   std::cout << "timedOut is invoked " << std::endl;
-  dhcp_entry_onMAC_t::const_iterator it;
+  dhcp_entry_onMAC_t::iterator it;
+
   const uint8_t *clientMAC = reinterpret_cast<const uint8_t *>(txn);
-  std::string MAC = std::string((const char *)clientMAC, 6);
+
+  std::cout << "TIMEDOUT "
+            << std::hex << clientMAC[0] << " "
+            << std::hex << clientMAC[1] << " "
+            << std::hex << clientMAC[2] << " "
+            << std::hex << clientMAC[3] << " "
+            << std::hex << clientMAC[4] << " "
+            << std::hex << clientMAC[5] << " "
+            << std::hex << clientMAC[6] << " "
+            << std::hex << clientMAC[7] << " "
+            << std::endl;
+  std::string MAC = std::string((const char *)(clientMAC + 2), 6);
+  //std::string MAC = *clientMAC;
+
   it = m_dhcpUmapOnMAC.find(MAC);
 
   if(it != m_dhcpUmapOnMAC.end()) {
-    mna::dhcp::dhcpEntry *dEnt = it->second;
-    delete dEnt;
+    //mna::dhcp::dhcpEntry *dEnt = it->second;
+    std::cout << "dhcpEntry inst is deleted/released " << std::endl;
+    it->second.reset();
+    //delete dEnt;
   }
 
   return(0);

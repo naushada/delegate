@@ -347,6 +347,8 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
                 dhcp().set_start_timer(mna::dhcp::server::start_timer_t::from(*this, &mna::middleware::start_timer));
                 dhcp().set_stop_timer(mna::dhcp::server::stop_timer_t::from(*this, &mna::middleware::stop_timer));
 
+                /*Time Out Handling - response timeout*/
+                set_timer_dispatch(mna::dhcp::server::to_timer_t::from(dhcp(), &mna::dhcp::server::timedOut));
                 /*! Kick the processing of the request now.*/
                 eth().rx(in, inLen);
                 break;

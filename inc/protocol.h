@@ -945,7 +945,7 @@ namespace mna {
         long m_tid;
     };
 
-    using dhcp_entry_onMAC_t = std::unordered_map<std::string, dhcpEntry*>;
+    using dhcp_entry_onMAC_t = std::unordered_map<std::string, std::unique_ptr<dhcpEntry>>;
     using dhcp_entry_onIP_t = std::unordered_map<uint32_t, dhcpEntry>;
 
     class server {
@@ -958,6 +958,7 @@ namespace mna {
         using start_timer_t = delegate<long (uint32_t, const void*, bool)>;
         using stop_timer_t = delegate<void (long)>;
         using reset_timer_t = delegate<void (long, uint32_t)>;
+        using to_timer_t = delegate<long (const void*)>;
 
         dhcp_entry_onMAC_t m_dhcpUmapOnMAC;
         dhcp_entry_onIP_t m_dhcpUmapOnIP;
@@ -976,11 +977,13 @@ namespace mna {
 
         ~server()
         {
+          #if 0
           dhcp_entry_onMAC_t::const_iterator it;
           for(it = m_dhcpUmapOnMAC.begin(); it != m_dhcpUmapOnMAC.end(); ++it) {
             dhcpEntry *dEnt = it->second;
             delete dEnt;
           }
+          #endif
         }
 
         int32_t rx(const uint8_t* in, uint32_t inLen);
