@@ -44,3 +44,7 @@ else (DOXYGEN_FOUND)
   message("Doxygen need to be installed to generate the doxygen documentation")
 endif (DOXYGEN_FOUND)
 
+set(CTEST_MEMORYCHECK_COMMAND "/usr/bin/valgrind")
+include(CTest)
+add_test(unimanage_test unimanage)
+
