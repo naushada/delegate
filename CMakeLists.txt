@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.9)
 project(delegate)
+add_subdirectory(parser)
 
 include_directories(inc)
 include_directories(/usr/local/ACE_TAO-6.5.11/include)
@@ -14,7 +15,6 @@ file(GLOB SOURCES "src/*.cc")
 add_executable(unimanage ${SOURCES})
 target_link_libraries(unimanage ACE)
 
-
 # first we can indicate the documentation build as an option and set it to ON by default
 option(BUILD_DOC "Build documentation" ON)
 
@@ -22,7 +22,6 @@ option(BUILD_DOC "Build documentation" ON)
 find_package(Doxygen
              REQUIRED dot
              OPTIONAL_COMPONENTS mscgen dia)
-
 
 if (DOXYGEN_FOUND)
     # set input and output files
