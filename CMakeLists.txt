@@ -14,6 +14,7 @@ file(GLOB SOURCES "src/*.cc")
 
 add_executable(unimanage ${SOURCES})
 target_link_libraries(unimanage ACE)
+target_link_libraries(unimanage json-parser)
 
 # first we can indicate the documentation build as an option and set it to ON by default
 option(BUILD_DOC "Build documentation" ON)

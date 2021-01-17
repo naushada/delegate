@@ -56,7 +56,7 @@ namespace mna {
        * @brief This member function is used to set the State in FSM. This member function accepts the instance of a class
        *        and that class has to define receive as well as onEntry and onExit member function.Those member functions
        *        are assigned to delegate.
-       * @param reference to an instance to the class
+       * @param inst reference to an instance to the class
        * @return none.
        * */
       template<typename C>
@@ -790,6 +790,46 @@ namespace mna {
 
     using element_def_UMap_t = std::unordered_map<uint8_t, element_def_t>;
 
+    struct profile {
+      uint16_t m_mtu;
+      std::string m_primaryDns;
+      std::string m_secondaryDns;
+      std::string m_domainName;
+      uint32_t m_lease;
+    };
+
+    struct virtualNw {
+      std::string m_type;
+      /*! Name of the ethernet port.*/
+      std::string m_port;
+    };
+
+    struct configParam {
+      profile m_profile;
+      virtualNw m_virtualNw;
+      std::string m_subnetMask;
+      std::string m_ip;
+      std::string m_hostName;
+      std::string m_startIP;
+      std::string m_endIP;
+      std::vector<std::string> m_excludeIPs;
+    };
+
+    class serverConfig {
+      public:
+        serverConfig() = default;
+        serverConfig(const serverConfig& ) = default;
+        serverConfig(serverConfig&& ) = default;
+        ~serverConfig() = default;
+        serverConfig& operator=(configParam& rhs)
+        {
+          std::swap(m_config, rhs);
+          return *this;
+        }
+
+      private:
+        configParam m_config;
+    };
 
     class dhcpEntry {
       public:
@@ -1040,8 +1080,8 @@ namespace mna {
         uint32_t m_serverID;
         /* The Domain Name to be assigned to DHCP Client. */
         std::string m_domainName;
+        serverConfig m_config;
     };
-
   }
 
 }
