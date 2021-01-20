@@ -238,6 +238,22 @@ int32_t mna::dhcp::OnInform::receive(void* parent, const uint8_t* inPtr, uint32_
   return(0);
 }
 
+uint32_t mna::dhcp::dhcpEntry::get_lease() const
+{
+  return(m_parent->config().lease());
+}
+
+mna::dhcp::dhcpEntry::dhcpEntry(mna::dhcp::server* parent, uint32_t clientIP)
+{
+  m_fsm = std::make_unique<mna::FSM>(this);
+  m_parent = parent;
+  std::swap(m_clientIP, clientIP);
+  char hname[255];
+  gethostname(hname, sizeof(hname));
+  parent->config().hostName().assign((const char* )hname);
+  /* Initializing the State Machine. */
+  setState(OnDiscover::instance());
+}
 long mna::dhcp::dhcpEntry::startTimer(uint32_t delay, const void* txn)
 {
   std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
@@ -270,6 +286,7 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
   uint32_t offset = 0;
   uint8_t rsp[1024];
 
+  struct in_addr ip;
   mna::dhcp::element_def_t elm;
   uint8_t cookie[] = {0x63, 0x82, 0x53, 0x63};
   mna::dhcp::dhcp_t *out = (mna::dhcp::dhcp_t* )rsp;
@@ -344,9 +361,10 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
       switch(elm.get_val()[idx]) {
 
         case mna::dhcp::SUBNET_MASK:
+          inet_aton(m_parent->config().mask().c_str(), &ip);
           rsp[offset++] = mna::dhcp::SUBNET_MASK;
           rsp[offset++] = 4;
-          *((uint32_t*)&rsp[offset]) = htonl(0);
+          *((uint32_t*)&rsp[offset]) = htonl(ip.s_addr);
           offset += 4;
           break;
 
@@ -365,9 +383,10 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
           break;
 
         case mna::dhcp::DNS:
+          inet_aton(m_parent->config().primaryDns().c_str(), &ip);
           rsp[offset++] = mna::dhcp::DNS;
           rsp[offset++] = 4;
-          *((uint32_t*)&rsp[offset]) = htonl(m_dnsIP);
+          *((uint32_t*)&rsp[offset]) = htonl(ip.s_addr);
           offset += 4;
           break;
 
@@ -380,20 +399,20 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
 
         case mna::dhcp::HOST_NAME:
           rsp[offset++] = mna::dhcp::HOST_NAME;
-          rsp[offset++] = m_hostName.length();
+          rsp[offset++] = m_parent->config().hostName().length();
           /*Host Machine Name to be updated.*/;
-          std::memcpy((void *)&rsp[offset], m_hostName.c_str(),
-                       m_hostName.length());
-          offset += m_hostName.length();
+          std::memcpy((void *)&rsp[offset], m_parent->config().hostName().c_str(),
+                       m_parent->config().hostName().length());
+          offset += m_parent->config().hostName().length();
           break;
 
         case mna::dhcp::DOMAIN_NAME:
           rsp[offset++] = mna::dhcp::DOMAIN_NAME;
-          rsp[offset++] = m_domainName.length();
+          rsp[offset++] = m_parent->config().domainName().length();
           /*Host Machine Name to be updated.*/;
-          std::memcpy((void *)&rsp[offset], m_domainName.c_str(),
-                      m_domainName.length());
-          offset += m_domainName.length();
+          std::memcpy((void *)&rsp[offset], m_parent->config().domainName().c_str(),
+                      m_parent->config().domainName().length());
+          offset += m_parent->config().domainName().length();
           break;
 
         case mna::dhcp::BROADCAST_ADDRESS:
@@ -440,7 +459,7 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
           rsp[offset++] = mna::dhcp::IP_LEASE_TIME;
           rsp[offset++] = 4;
           /*Host Machine Name to be updated.*/;
-          *((uint32_t*)&rsp[offset]) = htonl(m_lease);
+          *((uint32_t*)&rsp[offset]) = htonl(m_parent->config().lease());
           offset += 4;
           break;
 
@@ -453,10 +472,11 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
           break;
 
         case mna::dhcp::SERVER_IDENTIFIER:
+          inet_aton(m_parent->config().ip().c_str(), &ip);
           rsp[offset++] = mna::dhcp::SERVER_IDENTIFIER;
           rsp[offset++] = 4;
           /*Host Machine Name to be updated.*/;
-          *((uint32_t*)&rsp[offset]) = htonl(m_serverID);
+          *((uint32_t*)&rsp[offset]) = htonl(ip.s_addr);
           offset += 4;
           break;
 
@@ -468,17 +488,18 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
 
   rsp[offset++] = mna::dhcp::IP_LEASE_TIME;
   rsp[offset++] = 4;
-  *((uint32_t*)&rsp[offset]) = htonl(m_lease);
+  *((uint32_t*)&rsp[offset]) = htonl(m_parent->config().lease());
   offset += 4;
 
   rsp[offset++] = mna::dhcp::MTU;
   rsp[offset++] = 2;
-  *((uint32_t*)&rsp[offset]) = htons(m_mtu);
+  *((uint32_t*)&rsp[offset]) = htons(m_parent->config().mtu());
   offset += 2;
 
   rsp[offset++] = mna::dhcp::SERVER_IDENTIFIER;
+  inet_aton(m_parent->config().ip().c_str(), &ip);
   rsp[offset++] = 4;
-  *((uint32_t*)&rsp[offset]) = htonl(m_serverID);
+  *((uint32_t*)&rsp[offset]) = htonl(ip.s_addr);
   offset += 4;
 
   rsp[offset++] = mna::dhcp::END;
@@ -600,7 +621,7 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 
     std::cout << "2.dhcpEntry instantiated " << std::endl;
     /* New DHCP Client Request, create an entry for it. */
-    std::unique_ptr<dhcpEntry> inst = std::make_unique<dhcpEntry>(this, 123, m_routerIP, m_dnsIP, m_lease, m_mtu, m_serverID, m_domainName);
+    std::unique_ptr<dhcpEntry> inst = std::make_unique<dhcpEntry>(this, 123);
 
     dhcpEntry &dEnt = *(inst.get());
     /* setting timer delegate */

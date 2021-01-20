@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <mutex>
 #include <memory>
+#include <arpa/inet.h>
 
 namespace mna {
   class FSM {
@@ -827,6 +828,86 @@ namespace mna {
           return *this;
         }
 
+        std::string& ip()
+        {
+          return(m_config.m_ip);
+        }
+
+        void ip(std::string &m)
+        {
+          m_config.m_ip = m;
+        }
+
+        std::string& mask()
+        {
+          return(m_config.m_subnetMask);
+        }
+
+        void mask(std::string &m)
+        {
+          m_config.m_subnetMask = m;
+        }
+
+        uint16_t mtu() const
+        {
+          return(m_config.m_profile.m_mtu);
+        }
+
+        void mtu(uint16_t m)
+        {
+          m_config.m_profile.m_mtu = m;
+        }
+
+        uint32_t lease() const
+        {
+          return(m_config.m_profile.m_lease);
+        }
+
+        void lease(uint32_t l)
+        {
+          m_config.m_profile.m_lease = l;
+        }
+
+        std::string& hostName()
+        {
+          return(m_config.m_hostName);
+        }
+
+        void hostName(std::string h)
+        {
+          m_config.m_hostName = h;
+        }
+
+        std::string& primaryDns()
+        {
+          return(m_config.m_profile.m_primaryDns);
+        }
+
+        void primaryDns(std::string pdns)
+        {
+          m_config.m_profile.m_primaryDns = pdns;
+        }
+
+        std::string& secondaryDns()
+        {
+          return(m_config.m_profile.m_secondaryDns);
+        }
+
+        void secondaryDns(std::string sdns)
+        {
+          m_config.m_profile.m_secondaryDns = sdns;
+        }
+
+        std::string& domainName()
+        {
+          return(m_config.m_profile.m_domainName);
+        }
+
+        void domainName(std::string dname)
+        {
+          m_config.m_profile.m_domainName = dname;
+        }
+
       private:
         configParam m_config;
     };
@@ -855,26 +936,20 @@ namespace mna {
         {
         }
 
-
-        dhcpEntry(server* parent, uint32_t clientIP, uint32_t routerIP, uint32_t dnsIP,
-                  uint32_t lease, uint32_t mtu, uint32_t serverID, std::string domainName)
+        dhcpEntry(server* parent, uint32_t clientIP);
+#if 0
+        dhcpEntry(server* parent, uint32_t clientIP)
         {
           m_fsm = std::make_unique<FSM>(this);
           m_parent = parent;
           std::swap(m_clientIP, clientIP);
-          std::swap(m_routerIP, routerIP);
-          std::swap(m_dnsIP, dnsIP);
-          std::swap(m_lease, lease);
-          std::swap(m_mtu, mtu);
-          std::swap(m_serverID, serverID);
-          std::swap(m_domainName, domainName);
           char hname[255];
           gethostname(hname, sizeof(hname));
-          m_hostName.assign((const char* )hname);
+          parent->m_config.hostName().assign((const char* )hname);
           /* Initializing the State Machine. */
           setState(OnDiscover::instance());
         }
-
+#endif
         FSM& getState() const
         {
           return((*m_fsm.get()).getState());
@@ -896,11 +971,12 @@ namespace mna {
         long startTimer(uint32_t delay, const void* txn);
         void stopTimer(long tid);
 
-        uint32_t get_lease() const
+        uint32_t get_lease() const;
+#if 0
         {
-          return(m_lease);
+          return(m_parent->m_config.lease());
         }
-
+#endif
         std::array<uint8_t, 6> get_chaddr() const
         {
           return(m_chaddr);
@@ -966,22 +1042,8 @@ namespace mna {
         uint32_t m_clientIP;
         /* Unique transaction ID of message received. */
         uint32_t m_xid;
-        /* The Router IP for DHCP Client. */
-        uint32_t m_routerIP;
-        /* The Domain Name Server IP. */
-        uint32_t m_dnsIP;
-        /* The validit of Offered IP address to DHCP Client. */
-        uint32_t m_lease;
-        /* The size of Ethernet Packet. */
-        uint32_t m_mtu;
-        /* The DHCP Server Identifier - Which is IP Address. */
-        uint32_t m_serverID;
         /* The DHCP Client MAC Address. */
         std::array<uint8_t, 6> m_chaddr;
-        /* The Domain Name to be assigned to DHCP Client. */
-        std::string m_domainName;
-        /* Name of Machine on which DHCP server is running. */
-        std::string m_hostName;
         /** The timer ID*/
         long m_tid;
     };
@@ -1009,11 +1071,6 @@ namespace mna {
 
         server()
         {
-          m_lease = 100;
-          m_mtu = 1500;
-          m_dnsIP = 0x08080404;
-          m_serverID = 0x01020304;
-          m_domainName.assign("www.example.com", 15);
         }
 
         ~server()
@@ -1060,6 +1117,11 @@ namespace mna {
           return(m_downstream);
         }
 
+        serverConfig& config()
+        {
+          return(m_config);
+        }
+
       private:
 
         start_timer_t m_start_timer;
@@ -1068,19 +1130,12 @@ namespace mna {
 
         upstream_t m_upstream;
         downstream_t m_downstream;
-        /* The Router IP for DHCP Client. */
-        uint32_t m_routerIP;
-        /* The Domain Name Server IP. */
-        uint32_t m_dnsIP;
-        /* The validit of Offered IP address to DHCP Client. */
-        uint32_t m_lease;
-        /* The size of Ethernet Packet. */
-        uint32_t m_mtu;
-        /* The DHCP Server Identifier - Which is IP Address. */
-        uint32_t m_serverID;
-        /* The Domain Name to be assigned to DHCP Client. */
-        std::string m_domainName;
+
         serverConfig m_config;
+        /*! Assigned IP Pools*/
+        std::vector<std::string> m_allocatedIPs;
+        /*! IP to be allocated from Pools*/
+        std::vector<std::string> m_poolIPs;
     };
   }
 
