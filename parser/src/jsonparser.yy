@@ -7,7 +7,7 @@
 using namespace std;
 typedef void* yyscan_t;
 extern int yylex(YYSTYPE *stype, YYLTYPE *ltype, yyscan_t scanner);
-void yyerror(YYLTYPE *ltype, yyscan_t scanner, JSON &pJson, const char *msg);
+void yyerror(YYLTYPE *ltype, yyscan_t scanner, parser::json& pJson, const char *msg);
 %}
 
 
@@ -24,12 +24,12 @@ typedef void* yyscan_t;
 }
 
 %union {
-  JSON::JSONObject  *m_jobject;
-  JSON::JSONMember  *m_jmember;
-  JSON::JSONArray   *m_jarray;
-  JSON::JSONElement *m_jelement;
-  JSON::JSONValue   *m_jvalue;
-  JSON::JSONMembers *m_jmembers;
+  parser::json::JSONObject  *m_jobject;
+  parser::json::JSONMember  *m_jmember;
+  parser::json::JSONArray   *m_jarray;
+  parser::json::JSONElement *m_jelement;
+  parser::json::JSONValue   *m_jvalue;
+  parser::json::JSONMembers *m_jmembers;
 }
 
 %token <m_jvalue> lSTRING LITERAL
@@ -47,7 +47,7 @@ typedef void* yyscan_t;
 %define api.pure full
 
 %param {yyscan_t scanner}
-%parse-param {JSON &pJson}
+%parse-param {parser::json& pJson}
 
 %start input
 
@@ -93,7 +93,7 @@ element
 %%
 
 void yyerror(YYLTYPE *yylloc, yyscan_t yyscanner,
-             JSON& pJson, const char *msg)
+             parser::json& pJson, const char *msg)
 {
   std::cout << "Error - " << msg << std::endl;
 }

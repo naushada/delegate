@@ -3,7 +3,7 @@
 #include "jsonparser.hpp"
 #include "json.h"
 
-extern void yyerror(YYLTYPE *ltype, yyscan_t scanner, JSON *pJson, const char *msg);
+extern void yyerror(YYLTYPE *ltype, yyscan_t scanner, parser::json *pJson, const char *msg);
 %}
 
 %option header-file="inc/jsonlexer.hh"
@@ -15,7 +15,7 @@ extern void yyerror(YYLTYPE *ltype, yyscan_t scanner, JSON *pJson, const char *m
  /*line number tracking*/
 %option yylineno
  /*Instance of class JSON */
-%option extra-type="JSON*"
+%option extra-type="parser::json*"
  /*This is required to remove warnings.*/
 %option nounput
 %option noinput
@@ -54,9 +54,9 @@ double          ({integer}|{number})[eE][+-]?{integer}+
  /*yyextra holds the pointer to instance of JSON.*/
  /*yylval is of YYSTYPE and YYSTYPE mapped to union defined in .yy file.*/
 
-"true"          {yylval->m_jvalue = yyextra->json_new_value_bool(JSON::TRUE); return LITERAL;}
+"true"          {yylval->m_jvalue = yyextra->json_new_value_bool(true); return LITERAL;}
 
-"false"         {yylval->m_jvalue = yyextra->json_new_value_bool(JSON::FALSE); return LITERAL;}
+"false"         {yylval->m_jvalue = yyextra->json_new_value_bool(false); return LITERAL;}
 
 "null"          {yylval->m_jvalue = yyextra->json_new_value(nullptr); return LITERAL;}
 
