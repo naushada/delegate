@@ -2,7 +2,7 @@
   "profile": {
     "mtu" : 1500,
     "primary-dns-ip" : "8.8.8.8",
-    "secondary-dns-ip" : "8.8.8.8",
+    "secondary-dns-ip" : "8.8.4.4",
     "domain-name" : "balaagh.net",
     "lease-time": 24
   },
@@ -18,6 +18,10 @@
     "exclude-ip": ["10.20.10.1", "10.20.100.5", "10.20.100.9", "10.20.100.11"]
   },
 
-  "nw1-dhcp" : {"interface": {"type": "local", "port": "enp0s3"}}
+  "nw1-dhcp" : {
+    "interface": {
+      "type": "local", "port": "enp0s3"
+    }
+  }
 }
 

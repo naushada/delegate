@@ -3,6 +3,7 @@ project(delegate)
 add_subdirectory(parser)
 
 include_directories(inc)
+include_directories(parser/inc)
 include_directories(/usr/local/ACE_TAO-6.5.11/include)
 link_directories(/usr/local/ACE_TAO-6.5.11/lib)
 
