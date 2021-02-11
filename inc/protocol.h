@@ -13,8 +13,6 @@
 #include <memory>
 #include <arpa/inet.h>
 
-#include "json.h"
-
 namespace mna {
   class FSM {
 
@@ -829,15 +827,7 @@ namespace mna {
           return *this;
         }
 
-        serverConfig()
-        {
-          /*! parse vdhcp schema json for dhcp configuration.*/
-          m_parser = parser::json::instance();
-          std::string sName("/home/mnahmed/delegate/schema/vdhcp");
-          m_parser->start(sName.c_str());
-          parser::json::JSONValue* val = m_parser->value();
-          m_parser->display(val);
-        }
+        serverConfig();
 
         std::string& ip()
         {
@@ -921,7 +911,6 @@ namespace mna {
 
       private:
         configParam m_config;
-        parser::json* m_parser;
     };
 
     class dhcpEntry {
@@ -1131,7 +1120,7 @@ namespace mna {
 
         serverConfig& config()
         {
-          return(m_config);
+          return(*m_config.get());
         }
 
       private:
@@ -1143,7 +1132,7 @@ namespace mna {
         upstream_t m_upstream;
         downstream_t m_downstream;
 
-        serverConfig m_config;
+        std::unique_ptr<serverConfig> m_config;
         /*! Assigned IP Pools*/
         std::vector<std::string> m_allocatedIPs;
         /*! IP to be allocated from Pools*/

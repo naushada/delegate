@@ -55,9 +55,9 @@ parser::json::~json()
   m_value = nullptr;
 }
 
-parser::json::JSONValue* parser::json::value(void)
+parser::json::JSONValue& parser::json::value(void)
 {
-  return(m_value);
+  return(*m_value);
 }
 
 void parser::json::value(parser::json::JSONValue *value)
@@ -430,12 +430,12 @@ parser::json::JSONElement* parser::json::json_value_add_element(JSONElement *ele
   return(element);
 }
 
-parser::json::JSONValue* parser::json::operator[](int index)
+parser::json::JSONValue& parser::json::operator[](int index)
 {
   return(json_value_at_index(value(), index));
 }
 
-parser::json::JSONValue* parser::json::at(int index)
+parser::json::JSONValue& parser::json::at(int index)
 {
   return(json_value_at_index(value(), index));
 }
@@ -447,68 +447,57 @@ parser::json::JSONValue* parser::json::at(int index)
  *
  * @return either nullptr or value at given index.
  * */
-parser::json::JSONValue* parser::json::json_value_at_index(JSONValue *value, int index)
+parser::json::JSONValue& parser::json::json_value_at_index(JSONValue &value, int index)
 {
   JSONElement *e = nullptr;
 
-  if(value->m_type != parser::json::VALUE_TYPE_ARRAY)
-    return(nullptr);
-
-  for(e = value->m_avalue->m_elements; index && (e != nullptr); index--, e = e->m_next)
+  for(e = value.m_avalue->m_elements; index && (e != nullptr); index--, e = e->m_next)
     ;
 
   if(e != nullptr)
-    return(e->m_value);
-
-  return(nullptr);
+    return(*e->m_value);
 }
 
-parser::json::JSONValue* parser::json::operator[](const char *key)
+parser::json::JSONValue& parser::json::operator[](const char *key)
 {
   return(json_value_at_key(value(), key));
 }
 
-parser::json::JSONValue* parser::json::at(const ACE_TCHAR *key)
+parser::json::JSONValue& parser::json::at(const ACE_TCHAR *key)
 {
   return(json_value_at_key(value(), key));
 }
 
-parser::json::JSONValue* parser::json::json_value_at_key(JSONValue *value, const char *key)
+parser::json::JSONValue& parser::json::json_value_at_key(JSONValue &value, const char *key)
 {
   JSONMembers *m = nullptr;
 
-  if((nullptr == value) ||
-     (value->m_type != parser::json::VALUE_TYPE_OBJECT) ||
-     (nullptr == key))
-    return(nullptr);
-
-  for(m = value->m_ovalue->m_members; m != nullptr; m = m->m_next)
+  for(m = value.m_ovalue->m_members; m != nullptr; m = m->m_next)
   {
     if((m->m_member->m_key->m_type == parser::json::VALUE_TYPE_STRING) &&
        (!strcmp(m->m_member->m_key->m_svalue, key)))
     {
-      return(m->m_member->m_value);
+      return(*m->m_member->m_value);
     }
   }
-
-  return(nullptr);
 }
 
-void parser::json::display(JSONValue *value)
+void parser::json::display(JSONValue &value)
 {
-  if(nullptr == value)
-    return;
 
-  switch(value->m_type)
+  switch(value.m_type)
   {
   case parser::json::VALUE_TYPE_STRING:
-    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l %s \n"), value->m_svalue));
+    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l %s \n"), value.m_svalue));
     break;
   case parser::json::VALUE_TYPE_OBJECT:
-    display(value->m_ovalue);
+    display(value.m_ovalue);
     break;
   case parser::json::VALUE_TYPE_ARRAY:
-    display(value->m_avalue);
+    display(value.m_avalue);
+    break;
+  case parser::json::VALUE_TYPE_INTEGER:
+    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l %d \n"), value.m_ivalue));
     break;
   default:
     ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Type not supported\n")));
@@ -523,8 +512,8 @@ void parser::json::display(JSONMembers *members)
 
   if(members->m_member)
   {
-    display(members->m_member->m_key);
-    display(members->m_member->m_value);
+    display(*members->m_member->m_key);
+    display(*members->m_member->m_value);
     display(members->m_next);
   }
 
@@ -543,7 +532,7 @@ void parser::json::display(JSONElement *element)
   if(nullptr == element)
     return;
 
-  display(element->m_value);
+  display(*element->m_value);
   display(element->m_next);
 }
 

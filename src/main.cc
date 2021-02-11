@@ -50,6 +50,10 @@ int main(int count, char* param[])
   mw.rx(et, sizeof(et));
 #endif /*__UT__*/
 
+  /*Config processing*/
+  std::unique_ptr<mna::dhcp::serverConfig> cfg = std::make_unique<mna::dhcp::serverConfig>();
+
+
   mna::middleware mw("enp0s9");
   ACE_Reactor::instance()->register_handler(&mw, ACE_Event_Handler::READ_MASK);
 
