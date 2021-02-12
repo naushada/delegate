@@ -72,7 +72,7 @@ int parser::json::stop(void)
   return(0);
 }
 
-int parser::json::start(const ACE_TCHAR *fname)
+int parser::json::parse(const ACE_TCHAR *fname)
 {
   int ret = -1;
 

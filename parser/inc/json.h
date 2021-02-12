@@ -134,7 +134,7 @@ namespace parser {
       static json *instance(void);
       static void destroy(void);
       static json *get_instance(void);
-      int start(const ACE_TCHAR *fname);
+      int parse(const ACE_TCHAR *fname);
       int stop(void);
 
       void display(JSONValue &value);

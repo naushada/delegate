@@ -803,6 +803,7 @@ namespace mna {
       std::string m_type;
       /*! Name of the ethernet port.*/
       std::string m_port;
+      uint16_t m_mtu;
     };
 
     struct configParam {
@@ -827,14 +828,75 @@ namespace mna {
           return *this;
         }
 
-        serverConfig();
+        serverConfig(std::string fname);
+
+        std::string& type()
+        {
+          return(m_config.m_virtualNw.m_type);
+        }
+
+        void type(std::string m)
+        {
+          m_config.m_virtualNw.m_type = m;
+        }
+
+        std::string& port()
+        {
+          return(m_config.m_virtualNw.m_port);
+        }
+
+        void port(std::string m)
+        {
+          m_config.m_virtualNw.m_port = m;
+        }
+
+        uint16_t pmtu()
+        {
+          return(m_config.m_virtualNw.m_mtu);
+        }
+
+        void pmtu(uint16_t m)
+        {
+          m_config.m_virtualNw.m_mtu = m;
+        }
+
+        std::vector<std::string>& excludeIP()
+        {
+          return(m_config.m_excludeIPs);
+        }
+
+        void excludeIP(std::string m)
+        {
+          m_config.m_excludeIPs.push_back(m);
+        }
+
+
+        std::string& startIP()
+        {
+          return(m_config.m_startIP);
+        }
+
+        void startIP(std::string m)
+        {
+          m_config.m_startIP = m;
+        }
+
+        std::string& endIP()
+        {
+          return(m_config.m_endIP);
+        }
+
+        void endIP(std::string m)
+        {
+          m_config.m_endIP = m;
+        }
 
         std::string& ip()
         {
           return(m_config.m_ip);
         }
 
-        void ip(std::string &m)
+        void ip(std::string m)
         {
           m_config.m_ip = m;
         }
@@ -844,7 +906,7 @@ namespace mna {
           return(m_config.m_subnetMask);
         }
 
-        void mask(std::string &m)
+        void mask(std::string m)
         {
           m_config.m_subnetMask = m;
         }

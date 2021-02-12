@@ -19,9 +19,9 @@
   },
 
   "nw1-dhcp" : {
-    "interface": {
-      "type": "local", "port": "enp0s3"
-    }
+    "type": "local",
+    "port": "enp0s9",
+    "mtu": 1500
   }
 }
 

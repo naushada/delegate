@@ -51,10 +51,11 @@ int main(int count, char* param[])
 #endif /*__UT__*/
 
   /*Config processing*/
-  std::unique_ptr<mna::dhcp::serverConfig> cfg = std::make_unique<mna::dhcp::serverConfig>();
+  std::string sName("/home/mnahmed/delegate/schema/vdhcp");
+  std::unique_ptr<mna::dhcp::serverConfig> cfg = std::make_unique<mna::dhcp::serverConfig>(sName);
 
 
-  mna::middleware mw("enp0s9");
+  mna::middleware mw(cfg->port());
   ACE_Reactor::instance()->register_handler(&mw, ACE_Event_Handler::READ_MASK);
 
   loop_forever();
