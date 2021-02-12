@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.9)
-project(delegate)
+project(ilm)
 add_subdirectory(parser)
 
 include_directories(inc)
