@@ -488,7 +488,7 @@ void parser::json::display(JSONValue &value)
   switch(value.m_type)
   {
   case parser::json::VALUE_TYPE_STRING:
-    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l %s \n"), value.m_svalue));
+    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l %s \n"), get_str(value).c_str()));
     break;
   case parser::json::VALUE_TYPE_OBJECT:
     display(value.m_ovalue);
@@ -497,7 +497,7 @@ void parser::json::display(JSONValue &value)
     display(value.m_avalue);
     break;
   case parser::json::VALUE_TYPE_INTEGER:
-    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l %d \n"), value.m_ivalue));
+    ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l %d \n"), get_int(value)));
     break;
   default:
     ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Type not supported\n")));
@@ -543,5 +543,17 @@ void parser::json::display(JSONArray *array)
 
   display(array->m_elements);
 }
+
+int32_t parser::json::get_int(JSONValue& val) const
+{
+  return(val.m_ivalue);
+}
+
+std::string parser::json::get_str(JSONValue& val) const
+{
+  return(val.m_svalue);
+}
+
+
 
 #endif /*__json_cc__*/
