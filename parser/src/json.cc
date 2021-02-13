@@ -549,9 +549,9 @@ int32_t parser::json::get_int(JSONValue& val) const
   return(val.m_ivalue);
 }
 
-std::string parser::json::get_str(JSONValue& val) const
+std::string parser::json::get_str(JSONValue& val)
 {
-  return(val.m_svalue);
+  return(std::string(val.m_svalue));
 }
 
 

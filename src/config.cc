@@ -27,7 +27,6 @@ mna::dhcp::serverConfig::serverConfig(std::string sname)
   excludeIP(m_parser->get_str(m_parser->json_value_at_index(m_parser->json_value_at_key(dhcp, "exclude-ip"), 1)));
   excludeIP(m_parser->get_str(m_parser->json_value_at_index(m_parser->json_value_at_key(dhcp, "exclude-ip"), 2)));
   excludeIP(m_parser->get_str(m_parser->json_value_at_index(m_parser->json_value_at_key(dhcp, "exclude-ip"), 3)));
-  excludeIP(m_parser->get_str(m_parser->json_value_at_index(m_parser->json_value_at_key(dhcp, "exclude-ip"), 4)));
 
   /*! Populating Profile's fields now. */
   mtu(m_parser->get_int(m_parser->json_value_at_key(profile, "mtu")));
@@ -40,11 +39,6 @@ mna::dhcp::serverConfig::serverConfig(std::string sname)
   type(m_parser->get_str(m_parser->json_value_at_key(vrf, "type")));
   port(m_parser->get_str(m_parser->json_value_at_key(vrf, "port")));
   pmtu(m_parser->get_int(m_parser->json_value_at_key(vrf, "mtu")));
-
-  std::cout << "Value of port " << domainName().c_str() << std::endl;
-  //m_parser->display(value);
-  parser::json::JSONValue& value1 = m_parser->json_value_at_index(m_parser->json_value_at_key(m_parser->json_value_at_key(val, "dhcp"), "exclude-ip"), 1);
-  m_parser->display(value1);
 }
 
 

@@ -144,7 +144,7 @@ namespace parser {
       void display(JSONMembers *members);
 
       int32_t get_int(JSONValue& val) const;
-      std::string get_str(JSONValue& val) const;
+      std::string get_str(JSONValue& val);
 
       json(JSONValue *);
 
