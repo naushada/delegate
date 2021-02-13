@@ -1034,12 +1034,6 @@ namespace mna {
         long startTimer(uint32_t delay, const void* txn);
         void stopTimer(long tid);
 
-        uint32_t get_lease() const;
-#if 0
-        {
-          return(m_parent->m_config.lease());
-        }
-#endif
         std::array<uint8_t, 6> get_chaddr() const
         {
           return(m_chaddr);
@@ -1183,6 +1177,11 @@ namespace mna {
         serverConfig& config()
         {
           return(*m_config.get());
+        }
+
+        void set_config(std::unique_ptr<serverConfig> cfg)
+        {
+          m_config = std::move(cfg);
         }
 
       private:

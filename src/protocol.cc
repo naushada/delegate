@@ -238,11 +238,6 @@ int32_t mna::dhcp::OnInform::receive(void* parent, const uint8_t* inPtr, uint32_
   return(0);
 }
 
-uint32_t mna::dhcp::dhcpEntry::get_lease() const
-{
-  return(m_parent->config().lease());
-}
-
 mna::dhcp::dhcpEntry::dhcpEntry(mna::dhcp::server* parent, uint32_t clientIP)
 {
   m_fsm = std::make_unique<mna::FSM>(this);
@@ -364,7 +359,7 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
           inet_aton(m_parent->config().mask().c_str(), &ip);
           rsp[offset++] = mna::dhcp::SUBNET_MASK;
           rsp[offset++] = 4;
-          *((uint32_t*)&rsp[offset]) = htonl(ip.s_addr);
+          *((uint32_t*)&rsp[offset]) = ip.s_addr;
           offset += 4;
           break;
 
@@ -386,7 +381,7 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
           inet_aton(m_parent->config().primaryDns().c_str(), &ip);
           rsp[offset++] = mna::dhcp::DNS;
           rsp[offset++] = 4;
-          *((uint32_t*)&rsp[offset]) = htonl(ip.s_addr);
+          *((uint32_t*)&rsp[offset]) = ip.s_addr;
           offset += 4;
           break;
 
@@ -451,7 +446,7 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
           rsp[offset++] = mna::dhcp::REQUESTED_IP_ADDRESS;
           rsp[offset++] = 4;
           /*Host Machine Name to be updated.*/;
-          *((uint32_t*)&rsp[offset]) = htonl(0x00);
+          *((uint32_t*)&rsp[offset]) = 0x00;
           offset += 4;
           break;
 
@@ -476,7 +471,7 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
           rsp[offset++] = mna::dhcp::SERVER_IDENTIFIER;
           rsp[offset++] = 4;
           /*Host Machine Name to be updated.*/;
-          *((uint32_t*)&rsp[offset]) = htonl(ip.s_addr);
+          *((uint32_t*)&rsp[offset]) = ip.s_addr;
           offset += 4;
           break;
 
@@ -499,7 +494,7 @@ int32_t mna::dhcp::dhcpEntry::buildAndSendResponse(const uint8_t* in, uint32_t i
   rsp[offset++] = mna::dhcp::SERVER_IDENTIFIER;
   inet_aton(m_parent->config().ip().c_str(), &ip);
   rsp[offset++] = 4;
-  *((uint32_t*)&rsp[offset]) = htonl(ip.s_addr);
+  *((uint32_t*)&rsp[offset]) = ip.s_addr;
   offset += 4;
 
   rsp[offset++] = mna::dhcp::END;

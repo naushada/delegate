@@ -38,7 +38,7 @@ namespace mna {
       /** This ctor is invoked when instantiated with non-const string.*/
       middleware(std::string& intf)
       {
-        m_intf = std::move(intf);
+        m_intf = intf;
         m_to_dispatch.reset();
         m_rx_dispatch.reset();
         m_tid = 0;

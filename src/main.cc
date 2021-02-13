@@ -56,6 +56,7 @@ int main(int count, char* param[])
 
 
   mna::middleware mw(cfg->port());
+  mw.dhcp().set_config(std::move(cfg));
   ACE_Reactor::instance()->register_handler(&mw, ACE_Event_Handler::READ_MASK);
 
   loop_forever();
