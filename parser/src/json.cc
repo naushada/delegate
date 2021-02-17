@@ -8,37 +8,6 @@
 
 #include "ace/Log_Msg.h"
 
-parser::json* parser::json::m_instance = nullptr;
-ACE_UINT32 parser::json::m_ref = 0;
-
-parser::json* parser::json::instance(void)
-{
-  if(nullptr == m_instance)
-  {
-    ACE_NEW_NORETURN(m_instance, parser::json());
-  }
-
-  m_ref++;
-  return(m_instance);
-}
-
-void parser::json::destroy(void)
-{
-  m_ref--;
-
-  if(!m_ref)
-  {
-    delete m_instance;
-    m_instance = nullptr;
-    m_ref = 0;
-  }
-}
-
-parser::json* parser::json::get_instance(void)
-{
-  return(m_instance);
-}
-
 parser::json::json(JSONValue *value)
 {
   m_value = value;
@@ -55,9 +24,9 @@ parser::json::~json()
   m_value = nullptr;
 }
 
-parser::json::JSONValue& parser::json::value(void)
+parser::json::JSONValue* parser::json::value(void)
 {
-  return(*m_value);
+  return(m_value);
 }
 
 void parser::json::value(parser::json::JSONValue *value)
@@ -100,27 +69,12 @@ int parser::json::parse(const ACE_TCHAR *fname)
 
   yylex_destroy(scanner);
 
-  if(in != nullptr)
+  if(in != stdin)
   {
     ACE_OS::fclose(in);
     in = nullptr;
   }
 
-  //JSONValue *jValue = json_value_at_key(json_value_at_index(json_value_at_key(json_value_at_key(this->value(), "menu"), "items"), 1), "id");
-  //JSONValue *arr = json_value_at_key(json_value_at_key(this->value(), "menu"), "items");
-#if 0
-  JSONValue *menu = (*this)["menu"];
-  JSON objMenu(menu);
-  JSONValue *items = objMenu["items"];
-  //JSONValue *arr = json_value_at_key(json_value_at_key(this->value(), "menu"), "items");
-  JSON ob(items);
-  JSONValue *jValue = json_value_at_key(ob[3], "label");
-
-  if(jValue && jValue->m_type == JSON_VALUE_TYPE_STRING)
-  {
-    std::cout << "value of id is " << jValue->m_svalue << std::endl;
-  }
-#endif
   return(ret);
 }
 
@@ -432,12 +386,12 @@ parser::json::JSONElement* parser::json::json_value_add_element(JSONElement *ele
 
 parser::json::JSONValue* parser::json::operator[](int index)
 {
-  return(json_value_at_index(value(), index));
+  return(json_value_at_index(*value(), index));
 }
 
 parser::json::JSONValue* parser::json::at(int index)
 {
-  return(json_value_at_index(value(), index));
+  return(json_value_at_index(*value(), index));
 }
 
 /*
@@ -462,12 +416,12 @@ parser::json::JSONValue* parser::json::json_value_at_index(JSONValue &value, int
 
 parser::json::JSONValue& parser::json::operator[](const char *key)
 {
-  return(json_value_at_key(value(), key));
+  return(json_value_at_key(*value(), key));
 }
 
 parser::json::JSONValue& parser::json::at(const ACE_TCHAR *key)
 {
-  return(json_value_at_key(value(), key));
+  return(json_value_at_key(*value(), key));
 }
 
 parser::json::JSONValue& parser::json::json_value_at_key(JSONValue &value, const char *key)

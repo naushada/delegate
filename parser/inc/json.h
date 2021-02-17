@@ -128,12 +128,9 @@ namespace parser {
       JSONValue &at(const char *key);
       JSONValue *at(int index);
 
-      JSONValue &value(void);
+      JSONValue* value(void);
       void value(JSONValue *value);
 
-      static json *instance(void);
-      static void destroy(void);
-      static json *get_instance(void);
       int parse(const ACE_TCHAR *fname);
       int stop(void);
 
@@ -147,12 +144,10 @@ namespace parser {
       std::string get_str(JSONValue& val);
 
       json(JSONValue *);
+      json();
 
     private:
-      static json *m_instance;
-      static ACE_UINT32 m_ref;
       JSONValue *m_value;
-      json();
 
   };
 }
