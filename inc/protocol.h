@@ -1335,6 +1335,11 @@ namespace mna {
       {
         m_hostName.push_back(h);
       }
+
+      std::vector<std::string>& hostName()
+      {
+        return(m_hostName);
+      }
     };
 
     struct config {
@@ -1381,7 +1386,7 @@ namespace mna {
           m_wanIP = m;
         }
 
-        int32_t buildWanIPRequest(std::string& req, vddnsPeer& peer);
+        int32_t buildWanIPRequest(std::string& req);
         int32_t processWanIPResponse(std::string& req);
         int32_t buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer);
         int32_t processWanIPUpdateResponse(std::string& req);

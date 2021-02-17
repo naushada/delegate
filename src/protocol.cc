@@ -907,20 +907,18 @@ int32_t mna::transport::udp::tx(uint8_t* out, size_t outLen)
 
 /*DDNS - support*/
 
-int32_t mna::ddns::client::buildWanIPRequest(std::string& req, vddnsPeer& peer)
+int32_t mna::ddns::client::buildWanIPRequest(std::string& req)
 {
   req.clear();
   req += "GET / HTTP/1.1\r\n";
-  req += "Host: ";
-  req += peer.domainName();
-  req += " \r\n";
+  req += "Host: ip1.dynupdate.no-ip.com\r\n";
   req += "Connection: keep-alive\r\n";
   req += "Content-Length: 0\r\n";
-  req += "User-Agent: \r\n";
+  req += "User-Agent: Balaagh ilm/Ubuntu balaagh.technologies@gmail.com\r\n";
   req += "Accept: \r\n";
   req += "Accept-Encoding: \r\n";
   req += "Accept-Language: \r\n";
-  req += "\r\n";
+  req += "\r\n\r\n";
 
   return(0);
 }
@@ -929,8 +927,18 @@ int32_t mna::ddns::client::buildWanIPRequest(std::string& req, vddnsPeer& peer)
 int32_t mna::ddns::client::buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer)
 {
   req.clear();
+  std::string hosts;
+
+  for_each(peer.hostName().begin(), peer.hostName().end(), [&](std::string arg) {hosts += arg; hosts += ",";});
+
+  if(!hosts.empty()) {
+    /*! getridof of last , from a host string.*/
+    hosts.erase(hosts.size() - 1);
+  }
+
   req += "GET /nic/update?hostname=";
-  req += "mytestyourhost.example.com&myip=";
+  req += hosts;
+  req += "&myip=";
   req += wanIP().c_str();
   req += "HTTP/1.1\r\n";
   req += "Host: ";
@@ -938,11 +946,11 @@ int32_t mna::ddns::client::buildWanIPUpdateRequest(std::string& req, vddnsPeer& 
   req += " \r\n";
   req += "Connection: keep-alive\r\n";
   req += "Content-Length: 0\r\n";
-  req += "User-Agent: \r\n";
+  req += "User-Agent: Balaagh ilm/ubuntu balaagh.technologies@gmail.com\r\n";
   req += "Accept: \r\n";
   req += "Accept-Encoding: \r\n";
   req += "Accept-Language: \r\n";
-  req += "\r\n";
+  req += "\r\n\r\n";
 
   return(0);
 }

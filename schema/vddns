@@ -1,0 +1,44 @@
+{
+  "ddns-profile": {
+    /*"service-provider" : ["no-ip.com", "dyndns.org", "88ip.cn", "oray.com"],*/
+    "service-provider" : [{
+      "name": "no-ip.com",
+      "user-id" : "",
+      "password" : "",
+      "domain-name": "dynupdate.no-ip.com",
+      "host-name": ["cordoba.myddns.me", "mleague.ddns.net"],
+      "port-number":80
+    }, {
+      "name": "dyndns.org",
+      "user-id" : "",
+      "password" : "",
+      "domain-name": "dynupdate.no-ip.com",
+      "host-name": ["cordoba.myddns.me", "mleague.ddns.net"],
+      "port-number":80
+      }, {
+      "name": "88ip.cn",
+      "user-id" : "",
+      "password" : "",
+      "domain-name": "dynupdate.no-ip.com",
+      "host-name": ["cordoba.myddns.me", "mleague.ddns.net"],
+      "port-number":80
+      }, {
+      "name": "oray.com",
+      "user-id" : "",
+      "password" : "",
+      "domain-name": "dynupdate.no-ip.com",
+      "host-name": ["cordoba.myddns.me", "mleague.ddns.net"],
+      "port-number":80
+      }]
+  },
+
+  "vddns-instance": {
+    "bind-address" : "10.20.10.1",
+    "periodic-update-after": 30
+  },
+
+  "vddns-peer": {
+    "ddns-server": "ddns-profile"
+  }
+}
+
