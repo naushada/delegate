@@ -430,12 +430,12 @@ parser::json::JSONElement* parser::json::json_value_add_element(JSONElement *ele
   return(element);
 }
 
-parser::json::JSONValue& parser::json::operator[](int index)
+parser::json::JSONValue* parser::json::operator[](int index)
 {
   return(json_value_at_index(value(), index));
 }
 
-parser::json::JSONValue& parser::json::at(int index)
+parser::json::JSONValue* parser::json::at(int index)
 {
   return(json_value_at_index(value(), index));
 }
@@ -447,7 +447,7 @@ parser::json::JSONValue& parser::json::at(int index)
  *
  * @return either nullptr or value at given index.
  * */
-parser::json::JSONValue& parser::json::json_value_at_index(JSONValue &value, int index)
+parser::json::JSONValue* parser::json::json_value_at_index(JSONValue &value, int index)
 {
   JSONElement *e = nullptr;
 
@@ -455,7 +455,9 @@ parser::json::JSONValue& parser::json::json_value_at_index(JSONValue &value, int
     ;
 
   if(e != nullptr)
-    return(*e->m_value);
+    return(e->m_value);
+
+  return(nullptr);
 }
 
 parser::json::JSONValue& parser::json::operator[](const char *key)

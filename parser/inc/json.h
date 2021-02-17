@@ -119,14 +119,14 @@ namespace parser {
       JSONElement *json_value_add_element(JSONElement *element, JSONValue *value);
       JSONMember *json_value_add_member(JSONMember *member, JSONValue *key, JSONValue *value);
 
-      JSONValue &json_value_at_index(JSONValue &value, int index);
+      JSONValue *json_value_at_index(JSONValue &value, int index);
       JSONValue &json_value_at_key(JSONValue &value, const char *key);
 
       /*Array operator overloading.*/
-      JSONValue &operator [] (int index);
+      JSONValue *operator [] (int index);
       JSONValue &operator [] (const char *key);
       JSONValue &at(const char *key);
-      JSONValue &at(int index);
+      JSONValue *at(int index);
 
       JSONValue &value(void);
       void value(JSONValue *value);

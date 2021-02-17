@@ -971,8 +971,35 @@ namespace mna {
           m_config.m_profile.m_domainName = dname;
         }
 
+        void fillIPPool(std::string startIP, std::string endIP, std::string subnetMASK)
+        {
+          struct in_addr IP_s;
+          struct in_addr IP_e;
+          struct in_addr MASK;
+
+          uint32_t hostAddr;
+          uint32_t nwAddr;
+
+          m_poolIPs.clear();
+          m_allocatedIPs.clear();
+
+          /*! transforming from dotted notation into decimal/integer number.*/
+          inet_aton(startIP.c_str(), &IP_s);
+          inet_aton(endIP.c_str(), &IP_e);
+          inet_aton(subnetMASK.c_str(), &MASK);
+
+          hostAddr = IP_s.s_addr & MASK.s_addr;
+          nwAddr = IP_s.s_addr & (~MASK.s_addr);
+          std::cout << "hostAddr " << hostAddr << " nwAddr " << nwAddr << std::endl;
+
+        }
+
       private:
         configParam m_config;
+        /*! Assigned IP Pools*/
+        std::vector<std::string> m_allocatedIPs;
+        /*! IP to be allocated from Pools*/
+        std::vector<std::string> m_poolIPs;
     };
 
     class dhcpEntry {
@@ -1194,13 +1221,176 @@ namespace mna {
         downstream_t m_downstream;
 
         std::unique_ptr<serverConfig> m_config;
-        /*! Assigned IP Pools*/
-        std::vector<std::string> m_allocatedIPs;
-        /*! IP to be allocated from Pools*/
-        std::vector<std::string> m_poolIPs;
     };
   }
 
+}
+
+
+namespace mna {
+
+  namespace ddns {
+
+    struct vddnsInstance {
+      std::string m_bindAddress;
+      uint32_t m_periodicUpdate;
+
+      vddnsInstance()
+      {
+        m_bindAddress.clear();
+      }
+
+      void bindAddress(std::string m)
+      {
+        m_bindAddress = m;
+      }
+
+      std::string bindAddress()
+      {
+        return(m_bindAddress);
+      }
+
+      void periodicUpdate(uint32_t m)
+      {
+        m_periodicUpdate = m;
+      }
+
+      uint32_t periodicUpdate()
+      {
+        return(m_periodicUpdate);
+      }
+    };
+
+    struct vddnsPeer {
+      /*! service provide*/
+      std::string m_name;
+      std::string m_userId;
+      std::string m_password;
+      /*! This domain name is provided by service-provider*/
+      std::string m_domainName;
+      uint16_t m_peerPort;
+      std::vector<std::string> m_hostName;
+
+      vddnsPeer()
+      {
+        m_name.clear();
+        m_userId.clear();
+        m_password.clear();
+        m_domainName.clear();
+        m_peerPort = 80;
+        m_hostName.clear();
+      }
+
+      void name(std::string m)
+      {
+        m_name = m;
+      }
+
+      std::string name()
+      {
+        return(m_name);
+      }
+
+      void userId(std::string m)
+      {
+        m_userId = m;
+      }
+
+      std::string userId()
+      {
+        return(m_userId);
+      }
+
+      void password(std::string m)
+      {
+        m_password = m;
+      }
+
+      std::string password()
+      {
+        return(m_password);
+      }
+
+      void domainName(std::string m)
+      {
+        m_domainName = m;
+      }
+
+      std::string domainName()
+      {
+        return(m_domainName);
+      }
+
+      void peerPort(uint16_t m)
+      {
+        m_peerPort = m;
+      }
+
+      uint16_t peerPort()
+      {
+        return(m_peerPort);
+      }
+
+      void hostName(std::string h)
+      {
+        m_hostName.push_back(h);
+      }
+    };
+
+    struct config {
+      std::vector<vddnsPeer> m_peer;
+      vddnsInstance m_instance;
+
+      config(std::string sName)
+      {
+        parse(sName);
+      }
+
+      config(const config& ) = default;
+      config(config&& ) = default;
+
+      std::vector<vddnsPeer>& peer()
+      {
+        return(m_peer);
+      }
+
+      vddnsInstance& instance()
+      {
+        return(m_instance);
+      }
+
+      int32_t parse(std::string name);
+    };
+
+    class client {
+      public:
+
+        client() = default;
+        config& get_config()
+        {
+          return(*m_config.get());
+        }
+
+        std::string wanIP()
+        {
+          return(m_wanIP);
+        }
+
+        void wanIP(std::string m)
+        {
+          m_wanIP = m;
+        }
+
+        int32_t buildWanIPRequest(std::string& req, vddnsPeer& peer);
+        int32_t processWanIPResponse(std::string& req);
+        int32_t buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer);
+        int32_t processWanIPUpdateResponse(std::string& req);
+
+      private:
+        std::unique_ptr<config> m_config;
+        std::string m_wanIP;
+    };
+  }
 }
 
 

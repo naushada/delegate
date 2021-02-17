@@ -54,6 +54,11 @@ int main(int count, char* param[])
   std::string sName("/home/mnahmed/delegate/schema/vdhcp");
   std::unique_ptr<mna::dhcp::serverConfig> cfg = std::make_unique<mna::dhcp::serverConfig>(sName);
 
+  cfg->fillIPPool(cfg->startIP(), cfg->endIP(), cfg->mask());
+
+  /*vddns-config*/
+  std::string vddns_name("/home/mnahmed/delegate/schema/vddns");
+  std::unique_ptr<mna::ddns::config> vddns_config = std::make_unique<mna::ddns::config>(vddns_name);
 
   mna::middleware mw(cfg->port());
   mw.dhcp().set_config(std::move(cfg));

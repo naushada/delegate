@@ -905,5 +905,46 @@ int32_t mna::transport::udp::tx(uint8_t* out, size_t outLen)
 }
 
 
+/*DDNS - support*/
+
+int32_t mna::ddns::client::buildWanIPRequest(std::string& req, vddnsPeer& peer)
+{
+  req.clear();
+  req += "GET / HTTP/1.1\r\n";
+  req += "Host: ";
+  req += peer.domainName();
+  req += " \r\n";
+  req += "Connection: keep-alive\r\n";
+  req += "Content-Length: 0\r\n";
+  req += "User-Agent: \r\n";
+  req += "Accept: \r\n";
+  req += "Accept-Encoding: \r\n";
+  req += "Accept-Language: \r\n";
+  req += "\r\n";
+
+  return(0);
+}
+
+
+int32_t mna::ddns::client::buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer)
+{
+  req.clear();
+  req += "GET /nic/update?hostname=";
+  req += "mytestyourhost.example.com&myip=";
+  req += wanIP().c_str();
+  req += "HTTP/1.1\r\n";
+  req += "Host: ";
+  req += peer.domainName();
+  req += " \r\n";
+  req += "Connection: keep-alive\r\n";
+  req += "Content-Length: 0\r\n";
+  req += "User-Agent: \r\n";
+  req += "Accept: \r\n";
+  req += "Accept-Encoding: \r\n";
+  req += "Accept-Language: \r\n";
+  req += "\r\n";
+
+  return(0);
+}
 
 #endif /* __PROTOCOL_CC__ */
