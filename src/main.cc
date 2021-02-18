@@ -65,8 +65,11 @@ int main(int count, char* param[])
   std::string req;
   vddns_client.buildWanIPRequest(req);
   std::cout << "WanIPRequest is - " << req.c_str() << std::endl;
-  vddns_client.buildWanIPUpdateRequest(req, *vddns_client.get_config().peer().begin());
-  std::cout << "WanIPUpdateRequest is - " << req.c_str() << std::endl;
+
+  for_each(vddns_client.get_config().peer().begin(), vddns_client.get_config().peer().end(), [&](mna::ddns::vddnsPeer& peer) {
+    vddns_client.buildWanIPUpdateRequest(req, peer);
+    std::cout << "WanIPUpdateRequest is - " << req.c_str() << std::endl;
+  });
 
   mna::middleware mw(cfg->port());
   mw.dhcp().set_config(std::move(cfg));

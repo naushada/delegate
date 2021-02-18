@@ -72,6 +72,7 @@ int32_t mna::ddns::config::parse(std::string sname)
     peerConfig.domainName(m_parser.get_str(m_parser.json_value_at_key(*peerArr, "domain-name")));
 
     int32_t subIdx = 0;
+    peerConfig.hostName().clear();
     parser::json::JSONValue* hostArr = m_parser.json_value_at_index(m_parser.json_value_at_key(*peerArr, "host-name"), subIdx);
     for(; hostArr != nullptr; )
     {
