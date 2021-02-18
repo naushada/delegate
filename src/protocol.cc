@@ -907,6 +907,11 @@ int32_t mna::transport::udp::tx(uint8_t* out, size_t outLen)
 
 /*DDNS - support*/
 
+/**
+ * @brief 
+ * @param req
+ * @return 
+ * */
 int32_t mna::ddns::client::buildWanIPRequest(std::string& req)
 {
   req.clear();
@@ -922,7 +927,12 @@ int32_t mna::ddns::client::buildWanIPRequest(std::string& req)
   return(0);
 }
 
-
+/**
+ * @brief
+ * @param req
+ * @param peer
+ * @return
+ * */
 int32_t mna::ddns::client::buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer)
 {
   req.clear();
