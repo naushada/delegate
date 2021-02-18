@@ -1376,6 +1376,11 @@ namespace mna {
           return(*m_config.get());
         }
 
+        void set_config(std::unique_ptr<config> cfg)
+        {
+          m_config = std::move(cfg);
+        }
+
         std::string wanIP()
         {
           return(m_wanIP);

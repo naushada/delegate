@@ -949,7 +949,7 @@ int32_t mna::ddns::client::buildWanIPUpdateRequest(std::string& req, vddnsPeer& 
   req += hosts;
   req += "&myip=";
   req += wanIP().c_str();
-  req += "HTTP/1.1\r\n";
+  req += " HTTP/1.1\r\n";
   req += "Host: ";
   req += peer.domainName();
   req += " \r\n";

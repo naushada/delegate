@@ -60,6 +60,13 @@ int main(int count, char* param[])
   /*vddns-config*/
   std::string vddns_name("/home/mnahmed/ilm/schema/vddns");
   std::unique_ptr<mna::ddns::config> vddns_config = std::make_unique<mna::ddns::config>(vddns_name);
+  mna::ddns::client vddns_client;
+  vddns_client.set_config(std::move(vddns_config));
+  std::string req;
+  vddns_client.buildWanIPRequest(req);
+  std::cout << "WanIPRequest is - " << req.c_str() << std::endl;
+  vddns_client.buildWanIPUpdateRequest(req, *vddns_client.get_config().peer().begin());
+  std::cout << "WanIPUpdateRequest is - " << req.c_str() << std::endl;
 
   mna::middleware mw(cfg->port());
   mw.dhcp().set_config(std::move(cfg));
