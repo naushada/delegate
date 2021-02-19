@@ -23,10 +23,12 @@ mna::dhcp::serverConfig::serverConfig(std::string sname)
   startIP(m_parser.get_str(m_parser.json_value_at_key(dhcp, "start-ip")));
   endIP(m_parser.get_str(m_parser.json_value_at_key(dhcp, "end-ip")));
 
-  excludeIP(m_parser.get_str(*m_parser.json_value_at_index(m_parser.json_value_at_key(dhcp, "exclude-ip"), 0)));
-  excludeIP(m_parser.get_str(*m_parser.json_value_at_index(m_parser.json_value_at_key(dhcp, "exclude-ip"), 1)));
-  excludeIP(m_parser.get_str(*m_parser.json_value_at_index(m_parser.json_value_at_key(dhcp, "exclude-ip"), 2)));
-  excludeIP(m_parser.get_str(*m_parser.json_value_at_index(m_parser.json_value_at_key(dhcp, "exclude-ip"), 3)));
+  int32_t idx = 0;
+  parser::json::JSONValue* exIPArr = m_parser.json_value_at_index(m_parser.json_value_at_key(dhcp, "exclude-ip"), idx++);
+  for(; exIPArr != nullptr; ++idx) {
+    excludeIP(m_parser.get_str(*exIPArr));
+    exIPArr = m_parser.json_value_at_index(m_parser.json_value_at_key(dhcp, "exclude-ip"), idx);
+  }
 
   /*! Populating Profile's fields now. */
   mtu(m_parser.get_int(m_parser.json_value_at_key(profile, "mtu")));
@@ -39,12 +41,10 @@ mna::dhcp::serverConfig::serverConfig(std::string sname)
   type(m_parser.get_str(m_parser.json_value_at_key(vrf, "type")));
   port(m_parser.get_str(m_parser.json_value_at_key(vrf, "port")));
   pmtu(m_parser.get_int(m_parser.json_value_at_key(vrf, "mtu")));
-
-  m_parser.stop();
 }
 
 
-int32_t mna::ddns::config::parse(std::string sname)
+mna::ddns::config::config(std::string sname)
 {
   parser::json m_parser;
   m_parser.parse(sname.c_str());
@@ -64,29 +64,26 @@ int32_t mna::ddns::config::parse(std::string sname)
   int32_t idx = 0;
   vddnsPeer peerConfig;
   parser::json::JSONValue* peerArr = nullptr;
-  for(peerArr = m_parser.json_value_at_index((m_parser.json_value_at_key(profile, "service-provider")), idx); peerArr != nullptr; )
+  for(peerArr = m_parser.json_value_at_index((m_parser.json_value_at_key(profile, "service-provider")), idx++); peerArr != nullptr; ++idx)
   {
     peerConfig.name(m_parser.get_str(m_parser.json_value_at_key(*peerArr, "name")));
     peerConfig.userId(m_parser.get_str(m_parser.json_value_at_key(*peerArr, "user-id")));
     peerConfig.password(m_parser.get_str(m_parser.json_value_at_key(*peerArr, "password")));
     peerConfig.domainName(m_parser.get_str(m_parser.json_value_at_key(*peerArr, "domain-name")));
+    peerConfig.peerPort(m_parser.get_int(m_parser.json_value_at_key(*peerArr, "port-number")));
 
     int32_t subIdx = 0;
     peerConfig.hostName().clear();
-    parser::json::JSONValue* hostArr = m_parser.json_value_at_index(m_parser.json_value_at_key(*peerArr, "host-name"), subIdx);
-    for(; hostArr != nullptr; )
+    parser::json::JSONValue* hostArr = m_parser.json_value_at_index(m_parser.json_value_at_key(*peerArr, "host-name"), subIdx++);
+    for(; hostArr != nullptr; ++subIdx)
     {
       peerConfig.hostName(m_parser.get_str(*hostArr));
-      hostArr = m_parser.json_value_at_index(m_parser.json_value_at_key(*peerArr, "host-name"), ++subIdx);
+      hostArr = m_parser.json_value_at_index(m_parser.json_value_at_key(*peerArr, "host-name"), subIdx);
     }
 
-    peerConfig.peerPort(m_parser.get_int(m_parser.json_value_at_key(*peerArr, "port-number")));
     peer().push_back(peerConfig);
-    ++idx;
     peerArr = m_parser.json_value_at_index((m_parser.json_value_at_key(profile, "service-provider")), idx);
   }
-
-  m_parser.stop();
 }
 
 

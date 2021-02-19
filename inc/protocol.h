@@ -1346,10 +1346,7 @@ namespace mna {
       std::vector<vddnsPeer> m_peer;
       vddnsInstance m_instance;
 
-      config(std::string sName)
-      {
-        parse(sName);
-      }
+      config(std::string sName);
 
       config(const config& ) = default;
       config(config&& ) = default;

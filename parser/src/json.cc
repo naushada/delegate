@@ -20,6 +20,7 @@ parser::json::json()
 
 parser::json::~json()
 {
+  stop();
   /*reclaim the heap memory now.*/
   m_value = nullptr;
 }

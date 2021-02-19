@@ -1,5 +1,6 @@
 #ifndef __MIDDLEWARE_H__
 #define __MIDDLEWARE_H__
+#include <string>
 
 #include <fcntl.h>
 #include <sys/un.h>
@@ -13,6 +14,7 @@
 #include "ace/Event_Handler.h"
 #include "ace/Basic_Types.h"
 #include "ace/SOCK_Dgram.h"
+#include "ace/SOCK_Stream.h"
 #include "ace/INET_Addr.h"
 #include "ace/Message_Block.h"
 
@@ -171,6 +173,79 @@ namespace mna {
       std::unique_ptr<mna::ipv4::ip> m_ip;
       std::unique_ptr<mna::eth::ether> m_et;
   };
+}
+
+
+namespace mna {
+
+  namespace tcp {
+
+    namespace server {
+      class middleware : public ACE_Event_Handler {
+        public:
+          ACE_INT32 handle_input(ACE_HANDLE handle) override;
+          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
+          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
+          ACE_HANDLE get_handle(void) const override;
+        private:
+          /*! socket fd */
+          ACE_HANDLE m_handle;
+          /*! UDP Socket */
+          ACE_SOCK_Stream m_sock_stream;
+      };
+    }
+
+    namespace client {
+      class middleware : public ACE_Event_Handler {
+        public:
+          middleware(std::string myIPAddress, std::string remoteAddress, bool isIPAddress, uint16_t peerPort);
+
+          ACE_INT32 handle_input(ACE_HANDLE handle) override;
+          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
+          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
+          ACE_HANDLE get_handle(void) const override;
+        private:
+          /*! socket fd */
+          ACE_HANDLE m_handle;
+          /*! UDP Socket */
+          ACE_SOCK_Stream m_new_stream;
+          ACE_INET_Addr m_remoteAddr;
+          ACE_INET_Addr m_myAddr;
+      };
+    }
+  }
+
+  namespace udp {
+    namespace server {
+      class middleware : public ACE_Event_Handler {
+        public:
+          ACE_INT32 handle_input(ACE_HANDLE handle) override;
+          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
+          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
+          ACE_HANDLE get_handle(void) const override;
+        private:
+          /*! socket fd */
+          ACE_HANDLE m_handle;
+          /*! UDP Socket */
+          ACE_SOCK_Dgram m_sock_dgram;
+      };
+    }
+
+    namespace client {
+      class middleware : public ACE_Event_Handler {
+        public:
+          ACE_INT32 handle_input(ACE_HANDLE handle) override;
+          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
+          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
+          ACE_HANDLE get_handle(void) const override;
+        private:
+          /*! socket fd */
+          ACE_HANDLE m_handle;
+          /*! UDP Socket */
+          ACE_SOCK_Dgram m_sock_dgram;
+      };
+    }
+  }
 }
 
 
