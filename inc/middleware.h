@@ -15,6 +15,7 @@
 #include "ace/Basic_Types.h"
 #include "ace/SOCK_Dgram.h"
 #include "ace/SOCK_Stream.h"
+#include "ace/SOCK_Connector.h"
 #include "ace/INET_Addr.h"
 #include "ace/Message_Block.h"
 
@@ -198,7 +199,7 @@ namespace mna {
     namespace client {
       class middleware : public ACE_Event_Handler {
         public:
-          middleware(std::string myIPAddress, std::string remoteAddress, bool isIPAddress, uint16_t peerPort);
+          middleware(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort);
 
           ACE_INT32 handle_input(ACE_HANDLE handle) override;
           ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
@@ -211,6 +212,7 @@ namespace mna {
           ACE_SOCK_Stream m_new_stream;
           ACE_INET_Addr m_remoteAddr;
           ACE_INET_Addr m_myAddr;
+          ACE_SOCK_Connector m_conn;
       };
     }
   }
