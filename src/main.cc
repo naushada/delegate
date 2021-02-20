@@ -62,6 +62,15 @@ int main(int count, char* param[])
   std::unique_ptr<mna::ddns::config> vddns_config = std::make_unique<mna::ddns::config>(vddns_name);
   mna::ddns::client vddns_client;
   vddns_client.set_config(std::move(vddns_config));
+
+  /* creating the instance now*/
+  mna::client::ddns_transport ddns_transport(vddns_client.get_config().instance().bindAddress(),
+                                 vddns_client.get_config().peer().front().domainName(),
+                                 vddns_client.get_config().peer().front().peerPort());
+
+  vddns_client.tx(mna::ddns::client::send_t::from(ddns_transport, &mna::client::ddns_transport::on_send));
+  vddns_client.set_connect(mna::ddns::client::connect_t::from(ddns_transport, &mna::client::ddns_transport::on_connect));
+
   std::string req;
   vddns_client.buildWanIPRequest(req);
   std::cout << "WanIPRequest is - " << req.c_str() << std::endl;
@@ -74,6 +83,7 @@ int main(int count, char* param[])
   mna::middleware mw(cfg->port());
   mw.dhcp().set_config(std::move(cfg));
   ACE_Reactor::instance()->register_handler(&mw, ACE_Event_Handler::READ_MASK);
+  ACE_Reactor::instance()->register_handler(&ddns_transport, ACE_Event_Handler::READ_MASK);
 
   loop_forever();
 

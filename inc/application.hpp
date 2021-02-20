@@ -25,7 +25,7 @@ namespace mna {
       class middleware : public ACE_Event_Handler {
         public:
           middleware(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort);
-          int32_t connect(const ACE_Time_Value& to);
+          int32_t connect();
 
           ACE_INT32 handle_input(ACE_HANDLE handle) override;
           ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
@@ -125,11 +125,12 @@ ACE_HANDLE mna::tcp::client::middleware<Derived>::handle_timeout(const ACE_Time_
 template<typename Derived>
 ACE_HANDLE mna::tcp::client::middleware<Derived>::get_handle(void) const
 {
+  std::cout << "this Fn " << __PRETTY_FUNCTION__ << std::endl;
   return(m_remoteConn.get_handle());
 }
 
 template<typename Derived>
-int32_t mna::tcp::client::middleware<Derived>::connect(const ACE_Time_Value& to)
+int32_t mna::tcp::client::middleware<Derived>::connect()
 {
   int32_t connStatus = 0;
 

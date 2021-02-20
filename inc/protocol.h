@@ -1366,6 +1366,9 @@ namespace mna {
 
     class client {
       public:
+        using receive_t = delegate<int32_t (const uint8_t* in, ssize_t inLen)>;
+        using send_t = delegate<int32_t (uint8_t* in, ssize_t inLen)>;
+        using connect_t = delegate<int32_t ()>;
 
         client() = default;
         config& get_config()
@@ -1388,6 +1391,36 @@ namespace mna {
           m_wanIP = m;
         }
 
+        void rx(receive_t r)
+        {
+          m_rx = r;
+        }
+
+        receive_t rx()
+        {
+          return(m_rx);
+        }
+
+        void tx(send_t r)
+        {
+          m_tx = r;
+        }
+
+        send_t tx()
+        {
+          return(m_tx);
+        }
+
+        void set_connect(connect_t r)
+        {
+          m_connect = r;
+        }
+
+        connect_t get_connect()
+        {
+          return(m_connect);
+        }
+
         int32_t buildWanIPRequest(std::string& req);
         int32_t processWanIPResponse(std::string& req);
         int32_t buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer);
@@ -1396,6 +1429,9 @@ namespace mna {
       private:
         std::unique_ptr<config> m_config;
         std::string m_wanIP;
+        receive_t m_rx;
+        send_t m_tx;
+        connect_t m_connect;
     };
   }
 }

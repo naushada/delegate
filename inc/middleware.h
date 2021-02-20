@@ -180,9 +180,9 @@ namespace mna {
 
 namespace mna {
   namespace client {
-    class ddns final : public mna::tcp::client::middleware<mna::client::ddns> {
+    class ddns_transport final : public mna::tcp::client::middleware<mna::client::ddns_transport> {
       public:
-        ddns(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort) : middleware(myIPAddress, remoteAddress, peerPort)
+        ddns_transport(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort) : middleware(myIPAddress, remoteAddress, peerPort)
         {
         }
 
@@ -199,6 +199,10 @@ namespace mna {
         }
 
         int32_t on_send(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+        int32_t on_connect() {
           std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
         }
 
