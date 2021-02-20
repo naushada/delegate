@@ -21,6 +21,7 @@
 
 #include "protocol.h"
 #include "delegate.hpp"
+#include "application.hpp"
 
 namespace mna {
 
@@ -178,80 +179,60 @@ namespace mna {
 
 
 namespace mna {
+  namespace client {
+    class ddns final : public mna::tcp::client::middleware<mna::client::ddns> {
+      public:
+        ddns(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort) : middleware(myIPAddress, remoteAddress, peerPort)
+        {
+        }
 
-  namespace tcp {
+        int32_t on_receive(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
 
-    namespace server {
-      class middleware : public ACE_Event_Handler {
-        public:
-          ACE_INT32 handle_input(ACE_HANDLE handle) override;
-          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
-          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
-          ACE_HANDLE get_handle(void) const override;
-        private:
-          /*! socket fd */
-          ACE_HANDLE m_handle;
-          /*! UDP Socket */
-          ACE_SOCK_Stream m_sock_stream;
-      };
-    }
+        int32_t on_timeout(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
 
-    namespace client {
-      class middleware : public ACE_Event_Handler {
-        public:
-          middleware(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort);
+        int32_t on_signal(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
 
-          ACE_INT32 handle_input(ACE_HANDLE handle) override;
-          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
-          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
-          ACE_HANDLE get_handle(void) const override;
-        private:
-          /*! socket fd */
-          ACE_HANDLE m_handle;
-          /*! UDP Socket */
-          ACE_SOCK_Stream m_new_stream;
-          ACE_INET_Addr m_remoteAddr;
-          ACE_INET_Addr m_myAddr;
-          ACE_SOCK_Connector m_conn;
-      };
-    }
-  }
+        int32_t on_send(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
 
-  namespace udp {
-    namespace server {
-      class middleware : public ACE_Event_Handler {
-        public:
-          ACE_INT32 handle_input(ACE_HANDLE handle) override;
-          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
-          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
-          ACE_HANDLE get_handle(void) const override;
-        private:
-          /*! socket fd */
-          ACE_HANDLE m_handle;
-          /*! UDP Socket */
-          ACE_SOCK_Dgram m_sock_dgram;
-      };
-    }
+      private:
 
-    namespace client {
-      class middleware : public ACE_Event_Handler {
-        public:
-          ACE_INT32 handle_input(ACE_HANDLE handle) override;
-          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
-          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
-          ACE_HANDLE get_handle(void) const override;
-        private:
-          /*! socket fd */
-          ACE_HANDLE m_handle;
-          /*! UDP Socket */
-          ACE_SOCK_Dgram m_sock_dgram;
-      };
-    }
+    };
+
+    class http final : public mna::tcp::client::middleware<mna::client::http> {
+      public:
+        http(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort) :middleware(myIPAddress, remoteAddress, peerPort)
+        {
+        }
+
+        int32_t on_receive(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+        int32_t on_timeout(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+        int32_t on_signal(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+        int32_t on_send(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+      private:
+
+    };
   }
 }
-
-
-
 
 
 

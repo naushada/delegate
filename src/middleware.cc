@@ -419,37 +419,4 @@ int32_t mna::middleware::tx(uint8_t* out, size_t outLen)
 }
 
 
-/**
- * TCP Client Section
- * */
-
-mna::tcp::client::middleware::middleware(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort)
-{
-  std::string peerAddr;
-
-  peerAddr.clear();
-  peerAddr = remoteAddress + ":" + std::to_string(peerPort);
-  m_remoteAddr.set_address(peerAddr.c_str(), peerAddr.length());
-
-  m_myAddr.set_address(myIPAddress.c_str(), myIPAddress.length());
-}
-
-
-ACE_INT32 mna::tcp::client::middleware::handle_input(ACE_HANDLE handle)
-{
-}
-
-ACE_INT32 mna::tcp::client::middleware::handle_signal(int signum, siginfo_t *s, ucontext_t *u)
-{
-}
-
-ACE_HANDLE mna::tcp::client::middleware::handle_timeout(const ACE_Time_Value &tv, const void *act)
-{
-}
-
-ACE_HANDLE mna::tcp::client::middleware::get_handle(void) const
-{
-  return(m_new_stream.get_handle());
-}
-
 #endif /*__MIDDLEWARE_CC__*/
