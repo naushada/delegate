@@ -907,6 +907,14 @@ int32_t mna::transport::udp::tx(uint8_t* out, size_t outLen)
 
 /*DDNS - support*/
 
+int32_t mna::ddns::client::on_receive(uint8_t* req, ssize_t reqLen)
+{
+  std::string in((const char*)req, reqLen);
+
+  std::cout << "Response is "<< in.c_str() <<std::endl;
+  return(0);
+}
+
 /**
  * @brief 
  * @param req

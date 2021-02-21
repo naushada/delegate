@@ -119,12 +119,16 @@ ACE_INT32 mna::tcp::client::middleware<Derived>::handle_input(ACE_HANDLE handle)
 template<typename Derived>
 ACE_INT32 mna::tcp::client::middleware<Derived>::handle_signal(int signum, siginfo_t *s, ucontext_t *u)
 {
+  Derived& child = static_cast<Derived&>(*this);
+  child.on_signal(signum, s, u);
   return(0);
 }
 
 template<typename Derived>
 ACE_HANDLE mna::tcp::client::middleware<Derived>::handle_timeout(const ACE_Time_Value &tv, const void *act)
 {
+  Derived& child = static_cast<Derived&>(*this);
+  child.on_timeout(act);
   return(0);
 }
 
@@ -170,7 +174,109 @@ int32_t mna::tcp::client::middleware<Derived>::to_send(uint8_t* out, ssize_t out
 }
 
 
+namespace mna {
+  namespace client {
+    class tcp final : public mna::tcp::client::middleware<mna::client::tcp> {
+      public:
+        using receive_t = delegate<int32_t (uint8_t* , ssize_t len)>;
+        using connect_t = delegate<int32_t ()>;
 
+        tcp(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort) : middleware(myIPAddress, remoteAddress, peerPort)
+        {
+        }
+
+        int32_t on_receive(uint8_t *in, ssize_t inLen) {
+          get_rx()(in, inLen);
+        }
+
+        int32_t on_timeout(const void* act) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+        int32_t on_signal(int signum, siginfo_t* s, ucontext_t* u) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+        int32_t on_send(uint8_t *in, ssize_t inLen) {
+          to_send(in, inLen);
+        }
+
+        int32_t on_connect() {
+          to_connect();
+        }
+
+        void set_connect(connect_t r)
+        {
+          m_connect = r;
+        }
+
+        connect_t get_connect()
+        {
+          return(m_connect);
+        }
+
+        void set_rx(receive_t r)
+        {
+          m_rx = r;
+        }
+
+        receive_t get_rx()
+        {
+          return(m_rx);
+        }
+
+        void set_tx(receive_t r)
+        {
+          m_tx = r;
+        }
+
+        receive_t get_tx()
+        {
+          return(m_tx);
+        }
+
+      private:
+        receive_t m_rx;
+        receive_t m_tx;
+        connect_t m_connect;
+
+    };
+
+    class http final : public mna::tcp::client::middleware<mna::client::http> {
+      public:
+        http(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort) :middleware(myIPAddress, remoteAddress, peerPort)
+        {
+        }
+
+        int32_t on_receive(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+          std::string resp((const char *)in, inLen);
+          std::cout << "The response is " << resp.c_str() << std::endl;
+        }
+
+        int32_t on_timeout(const void* act) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+        int32_t on_signal(int signum, siginfo_t* s, ucontext_t* u) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+        int32_t on_send(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+          to_send(in, inLen);
+        }
+
+        int32_t on_connect() {
+          to_connect();
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        }
+
+      private:
+
+    };
+  }
+}
 
 
 

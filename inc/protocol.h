@@ -1366,7 +1366,7 @@ namespace mna {
 
     class client {
       public:
-        using receive_t = delegate<int32_t (const uint8_t* in, ssize_t inLen)>;
+        using receive_t = delegate<int32_t (uint8_t* in, ssize_t inLen)>;
         using send_t = delegate<int32_t (uint8_t* in, ssize_t inLen)>;
         using connect_t = delegate<int32_t ()>;
 
@@ -1425,6 +1425,7 @@ namespace mna {
         int32_t processWanIPResponse(std::string& req);
         int32_t buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer, std::string b64AuthStr);
         int32_t processWanIPUpdateResponse(std::string& req);
+        int32_t on_receive(uint8_t* in, ssize_t inLen);
 
       private:
         std::unique_ptr<config> m_config;

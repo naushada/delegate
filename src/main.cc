@@ -64,12 +64,13 @@ int main(int count, char* param[])
   vddns_client.set_config(std::move(vddns_config));
 
   /* creating the instance now*/
-  mna::client::ddns_transport ddns_transport(vddns_client.get_config().instance().bindAddress(),
+  mna::client::tcp tcp_transport(vddns_client.get_config().instance().bindAddress(),
                                  vddns_client.get_config().peer().front().domainName(),
                                  vddns_client.get_config().peer().front().peerPort());
 
-  vddns_client.set_tx(mna::ddns::client::send_t::from(ddns_transport, &mna::client::ddns_transport::on_send));
-  vddns_client.set_connect(mna::ddns::client::connect_t::from(ddns_transport, &mna::client::ddns_transport::on_connect));
+  tcp_transport.set_rx(mna::ddns::client::receive_t::from(vddns_client, &mna::ddns::client::on_receive));
+  vddns_client.set_tx(mna::ddns::client::send_t::from(tcp_transport, &mna::client::tcp::on_send));
+  vddns_client.set_connect(mna::ddns::client::connect_t::from(tcp_transport, &mna::client::tcp::on_connect));
 
   std::string req;
   vddns_client.buildWanIPRequest(req);
@@ -93,7 +94,7 @@ int main(int count, char* param[])
   mna::middleware mw(cfg->port());
   mw.dhcp().set_config(std::move(cfg));
   ACE_Reactor::instance()->register_handler(&mw, ACE_Event_Handler::READ_MASK);
-  ACE_Reactor::instance()->register_handler(&ddns_transport, ACE_Event_Handler::READ_MASK);
+  ACE_Reactor::instance()->register_handler(&tcp_transport, ACE_Event_Handler::READ_MASK);
 
   loop_forever();
 
