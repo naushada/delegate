@@ -933,7 +933,7 @@ int32_t mna::ddns::client::buildWanIPRequest(std::string& req)
  * @param peer
  * @return
  * */
-int32_t mna::ddns::client::buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer)
+int32_t mna::ddns::client::buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer, std::string b64AuthStr)
 {
   req.clear();
   std::string hosts;
@@ -947,12 +947,15 @@ int32_t mna::ddns::client::buildWanIPUpdateRequest(std::string& req, vddnsPeer& 
 
   req += "GET /nic/update?hostname=";
   req += hosts;
-  req += "&myip=";
-  req += wanIP().c_str();
+  //req += "&myip";
+  //req += wanIP().c_str();
   req += " HTTP/1.1\r\n";
   req += "Host: ";
   req += peer.domainName();
   req += " \r\n";
+  req += "Authorization: ";
+  req += b64AuthStr.c_str();
+  req += "\r\n";
   req += "Connection: keep-alive\r\n";
   req += "Content-Length: 0\r\n";
   req += "User-Agent: curl/7.16.3 libcurl/7.16.3 OpenSSL/0.9.7l zlib/1.2.3\r\n";

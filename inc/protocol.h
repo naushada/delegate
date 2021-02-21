@@ -1401,12 +1401,12 @@ namespace mna {
           return(m_rx);
         }
 
-        void tx(send_t r)
+        void set_tx(send_t r)
         {
           m_tx = r;
         }
 
-        send_t tx()
+        send_t get_tx()
         {
           return(m_tx);
         }
@@ -1423,7 +1423,7 @@ namespace mna {
 
         int32_t buildWanIPRequest(std::string& req);
         int32_t processWanIPResponse(std::string& req);
-        int32_t buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer);
+        int32_t buildWanIPUpdateRequest(std::string& req, vddnsPeer& peer, std::string b64AuthStr);
         int32_t processWanIPUpdateResponse(std::string& req);
 
       private:

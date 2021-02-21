@@ -18,6 +18,7 @@
 #include "ace/SOCK_Connector.h"
 #include "ace/INET_Addr.h"
 #include "ace/Message_Block.h"
+#include "ace/Codecs.h"
 
 #include "protocol.h"
 #include "delegate.hpp"
@@ -187,7 +188,8 @@ namespace mna {
         }
 
         int32_t on_receive(uint8_t *in, ssize_t inLen) {
-          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+          std::string resp((const char *)in, inLen);
+          std::cout << "The response is " << resp.c_str() << std::endl;
         }
 
         int32_t on_timeout(uint8_t *in, ssize_t inLen) {
@@ -199,11 +201,11 @@ namespace mna {
         }
 
         int32_t on_send(uint8_t *in, ssize_t inLen) {
-          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+          to_send(in, inLen);
         }
 
         int32_t on_connect() {
-          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+          to_connect();
         }
 
       private:
@@ -218,6 +220,8 @@ namespace mna {
 
         int32_t on_receive(uint8_t *in, ssize_t inLen) {
           std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+          std::string resp((const char *)in, inLen);
+          std::cout << "The response is " << resp.c_str() << std::endl;
         }
 
         int32_t on_timeout(uint8_t *in, ssize_t inLen) {
@@ -229,6 +233,12 @@ namespace mna {
         }
 
         int32_t on_send(uint8_t *in, ssize_t inLen) {
+          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+          to_send(in, inLen);
+        }
+
+        int32_t on_connect() {
+          to_connect();
           std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
         }
 

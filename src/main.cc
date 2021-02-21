@@ -68,7 +68,7 @@ int main(int count, char* param[])
                                  vddns_client.get_config().peer().front().domainName(),
                                  vddns_client.get_config().peer().front().peerPort());
 
-  vddns_client.tx(mna::ddns::client::send_t::from(ddns_transport, &mna::client::ddns_transport::on_send));
+  vddns_client.set_tx(mna::ddns::client::send_t::from(ddns_transport, &mna::client::ddns_transport::on_send));
   vddns_client.set_connect(mna::ddns::client::connect_t::from(ddns_transport, &mna::client::ddns_transport::on_connect));
 
   std::string req;
@@ -76,8 +76,18 @@ int main(int count, char* param[])
   std::cout << "WanIPRequest is - " << req.c_str() << std::endl;
 
   for_each(vddns_client.get_config().peer().begin(), vddns_client.get_config().peer().end(), [&](mna::ddns::vddnsPeer& peer) {
-    vddns_client.buildWanIPUpdateRequest(req, peer);
+    std::string userPwd;
+    size_t outLen = 0 ;
+    userPwd = peer.userId();
+    userPwd += ":" + peer.password();
+    ACE_Byte* enc = ACE_Base64::encode((ACE_Byte*)userPwd.c_str(), userPwd.length(), &outLen, false);
+    std::string b64((const char *)enc, outLen);
+    ACE_OS::free(enc);
+
+    vddns_client.buildWanIPUpdateRequest(req, peer, b64);
     std::cout << "WanIPUpdateRequest is - " << req.c_str() << std::endl;
+    vddns_client.get_connect()();
+    vddns_client.get_tx()((uint8_t *)req.c_str(), (ssize_t)req.length());
   });
 
   mna::middleware mw(cfg->port());
