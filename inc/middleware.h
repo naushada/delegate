@@ -1,6 +1,7 @@
 #ifndef __MIDDLEWARE_H__
 #define __MIDDLEWARE_H__
 #include <string>
+#include <unordered_map>
 
 #include <fcntl.h>
 #include <sys/un.h>
@@ -16,6 +17,7 @@
 #include "ace/SOCK_Dgram.h"
 #include "ace/SOCK_Stream.h"
 #include "ace/SOCK_Connector.h"
+#include "ace/SOCK_Acceptor.h"
 #include "ace/INET_Addr.h"
 #include "ace/Message_Block.h"
 #include "ace/Codecs.h"

@@ -2,101 +2,263 @@
 #define __application_hpp__
 
 namespace mna {
+  template<typename Derived>
+  class common : public ACE_Event_Handler {
+    public:
+      common() = default;
+      common(const common& ) = default;
+      common(common&& ) = default;
+      virtual ~common() = default;
+
+      ACE_INT32 handle_close(ACE_HANDLE handle, ACE_Reactor_Mask close_mask) override;
+      ACE_INT32 handle_input(ACE_HANDLE handle) override;
+      ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
+      ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
+      ACE_HANDLE get_handle(void) const override;
+
+    private:
+
+  };
+}
+
+namespace mna {
   namespace tcp {
 
-    namespace server {
-      template<typename Derived>
-      class middleware : public ACE_Event_Handler {
-        public:
-          ACE_INT32 handle_input(ACE_HANDLE handle) override;
-          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
-          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
-          ACE_HANDLE get_handle(void) const override;
-        private:
-          /*! socket fd */
-          ACE_HANDLE m_handle;
-          /*! UDP Socket */
-          ACE_SOCK_Stream m_sock_stream;
-      };
-    }
+    class client final : public common<mna::tcp::client> {
+      public:
+        virtual ~client() = default;
 
-    namespace client {
-      template<typename Derived>
-      class middleware : public ACE_Event_Handler {
-        public:
-          middleware(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort);
-          int32_t to_connect();
-          int32_t to_send(uint8_t* out, ssize_t outLen);
+        using receive_t = delegate<int32_t (uint8_t*, ssize_t)>;
 
-          ACE_INT32 handle_input(ACE_HANDLE handle) override;
-          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
-          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
-          ACE_HANDLE get_handle(void) const override;
+        client(std::string remoteAddress, uint16_t peerPort, std::string myAddress, uint16_t myPort = 0)
+        {
+          std::string address;
 
-        private:
+          address.clear();
+          address = remoteAddress + ":" + std::to_string(peerPort);
+          ACE_INET_Addr addr(address.c_str());
+          m_remoteAddr.set(addr);
 
-          /*! socket fd */
-          ACE_HANDLE m_handle;
-          /*! UDP Socket */
-          ACE_SOCK_Stream m_remoteConn;
-          ACE_INET_Addr m_remoteAddr;
-          ACE_INET_Addr m_myAddr;
-          ACE_SOCK_Connector m_myConn;
-      };
-    }
+          /** local Address.*/
+          address.clear();
+
+          if(myPort) {
+            address = myAddress + ":" + std::to_string(myPort);
+            ACE_INET_Addr self(address.c_str());
+            m_myAddr.set(self);
+          }
+          else {
+            ACE_INET_Addr self(myAddress.c_str());
+            m_myAddr.set(self);
+          }
+        }
+
+        client(ACE_SOCK_Stream conn, ACE_INET_Addr peerAddr)
+        {
+          m_remoteAddr = peerAddr;
+          m_remoteConn = conn;
+        }
+
+        int32_t to_connect()
+        {
+          int32_t ret = 0;
+          ACE_Time_Value to(0,1);
+
+          ret = m_myConn.connect(m_remoteConn, m_remoteAddr, &to, m_myAddr);
+
+          if(ret < 0) {
+            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Connection to remoteHost %s Failed\n"), m_remoteAddr.get_host_name()));
+          }
+
+          return(ret);
+        }
+
+        int32_t to_send(std::unique_ptr<uint8_t> out, ssize_t outLen)
+        {
+          int32_t ret = 0;
+          uint32_t offset = 0;
+          ssize_t newLen = outLen - offset;
+
+          do {
+
+            ret = m_remoteConn.send_n((out.get() + offset), newLen);
+
+            if(ret < 0) {
+              /**! Error*/
+              ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l send_n failed ret = %d"),ret));
+              /**! if < 0 is returned then ACE library will close the connection, so don't get it closed.*/
+              return(0);
+            }
+
+            newLen -= ret;
+            offset += ret;
+
+          }while(newLen > 0);
+
+          return(outLen);
+        }
+
+        int32_t on_receive(int32_t handle)
+        {
+          std::array<uint8_t, 2048> in;
+          int32_t len = 0;
+          len = m_remoteConn.recv(in.data(), in.max_size());
+
+          /** Pass the received data to delegate which will process the request.*/
+          get_rx()(in.data(), len);
+
+          /** handle_close is invoked if -1 is returned.*/
+          return(len);
+        }
+
+        int32_t on_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0)
+        {
+          return(0);
+        }
+
+        int32_t on_timeout(const void *act=0)
+        {
+          return(0);
+        }
+
+        void handle(int32_t fd)
+        {
+          m_handle = fd;
+        }
+
+        int32_t handle() const
+        {
+          //m_handle = m_remoteConn.get_handle();
+          return(m_remoteConn.get_handle());
+        }
+
+        void set_rx(receive_t rx)
+        {
+          m_rx = rx;
+        }
+
+        receive_t get_rx() const
+        {
+          return(m_rx);
+        }
+
+      private:
+        int32_t m_handle;
+        receive_t m_rx;
+        ACE_INET_Addr m_remoteAddr;
+        ACE_INET_Addr m_myAddr;
+        ACE_SOCK_Connector m_myConn;
+        ACE_SOCK_Stream m_remoteConn;
+    };
+
+    class server final : public common<mna::tcp::server> {
+      public:
+        using receive_t = delegate<int32_t (uint8_t*, ssize_t)>;
+
+        server(std::string myAddr, uint16_t myPort, receive_t rx)
+        {
+          int32_t reuseAddr = 1;
+          std::string address;
+          /** local Address.*/
+          address.clear();
+
+          address = myAddr + ":" + std::to_string(myPort);
+          ACE_INET_Addr self(address.c_str());
+          m_myAddr.set(self);
+          m_listener.open(m_myAddr, reuseAddr);
+          handle(m_listener.get_handle());
+          m_rx = rx;
+        }
+
+        int32_t on_receive(int32_t handle)
+        {
+          ACE_INET_Addr remoteAddr;
+          int32_t ret = 0;
+
+          ret = m_listener.accept(m_newConn, &remoteAddr);
+          if(ret < 0) {
+            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Failed to established connection\n")));
+          }
+          else {
+            /**! Connection is established successfully.*/
+            std::unique_ptr<mna::tcp::client> connectedPeer = std::make_unique<mna::tcp::client>(m_newConn, remoteAddr);
+            connectedPeer->set_rx(m_rx);
+            ACE_Reactor::instance()->register_handler(connectedPeer.get(), ACE_Event_Handler::RWE_MASK);
+            m_actConn.insert(std::make_pair<int32_t, std::unique_ptr<mna::tcp::client>>(m_newConn.get_handle(), std::move(connectedPeer)));
+          }
+        }
+
+        int32_t on_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0)
+        {
+          return(0);
+        }
+
+        int32_t on_timeout(const void *act=0)
+        {
+          return(0);
+        }
+
+        int32_t to_send(uint8_t* out, ssize_t outLen)
+        {
+          return(0);
+        }
+
+        void handle(int32_t h)
+        {
+          m_handle = h;
+        }
+
+        int32_t handle() const
+        {
+          return(m_listener.get_handle());
+        }
+
+      private:
+        receive_t m_rx;
+        ACE_HANDLE m_handle;
+        ACE_SOCK_Stream m_newConn;
+        ACE_SOCK_Acceptor m_listener;
+        ACE_INET_Addr m_myAddr;
+        std::unordered_map<int32_t, std::unique_ptr<mna::tcp::client>> m_actConn;
+    };
   }
-
+#if 0
   namespace udp {
-    namespace server {
-      template<typename Derived>
-      class middleware : public ACE_Event_Handler {
-        public:
-          ACE_INT32 handle_input(ACE_HANDLE handle) override;
-          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
-          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
-          ACE_HANDLE get_handle(void) const override;
-        private:
-          /*! socket fd */
-          ACE_HANDLE m_handle;
-          /*! UDP Socket */
-          ACE_SOCK_Dgram m_sock_dgram;
-      };
-    }
+    class server final : public common<mna::udp::server> {
+      public:
+        server(std::string myAddr, uint16_t myPort);
+        int32_t to_send(uint8_t* out, ssize_t outLen);
+        int32_t on_receive(int32_t handle);
+        int32_t on_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0);
+        int32_t on_timeout(const void *act=0);
+      private:
+        ACE_HANDLE m_handle;
+        ACE_SOCK_Dgram m_udpConn;
+        ACE_INET_Addr m_remoteAddr;
+        ACE_INET_Addr m_myAddr;
+    };
 
-    namespace client {
-      template<typename Derived>
-      class middleware : public ACE_Event_Handler {
-        public:
-          ACE_INT32 handle_input(ACE_HANDLE handle) override;
-          ACE_INT32 handle_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0) override;
-          ACE_HANDLE handle_timeout(const ACE_Time_Value &tv, const void *act=0) override;
-          ACE_HANDLE get_handle(void) const override;
-        private:
-          /*! socket fd */
-          ACE_HANDLE m_handle;
-          /*! UDP Socket */
-          ACE_SOCK_Dgram m_sock_dgram;
-      };
-    }
+    class client final : public common<mna::udp::client> {
+      public:
+        client(std::string peerAddr, uint16_t peerPort, std::string myAddr, uint16_t myPort = 0);
+        int32_t to_send(uint8_t* out, ssize_t outLen);
+        int32_t on_receive(int32_t handle);
+        int32_t on_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0);
+        int32_t on_timeout(const void *act=0);
+      private:
+        ACE_HANDLE m_handle;
+        ACE_SOCK_Dgram m_udpConn;
+        ACE_INET_Addr m_remoteAddr;
+        ACE_INET_Addr m_myAddr;
+    };
   }
+#endif
 }
 
 template<typename Derived>
-mna::tcp::client::middleware<Derived>::middleware(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort)
+ACE_INT32 mna::common<Derived>::handle_input(ACE_HANDLE handle)
 {
-  std::string peerAddr;
-
-  peerAddr.clear();
-  peerAddr = remoteAddress + ":" + std::to_string(peerPort);
-  ACE_INET_Addr addr(peerAddr.c_str());
-  m_remoteAddr.set(addr);
-
-  m_myAddr.set_address(myIPAddress.c_str(), myIPAddress.length());
-}
-
-template<typename Derived>
-ACE_INT32 mna::tcp::client::middleware<Derived>::handle_input(ACE_HANDLE handle)
-{
+#if 0
   ssize_t len = 0;
   std::array<uint8_t, 2048>buffer;
   buffer.fill(0);
@@ -112,12 +274,16 @@ ACE_INT32 mna::tcp::client::middleware<Derived>::handle_input(ACE_HANDLE handle)
     /*! connection is closed now.*/
     m_remoteConn.close();
   }
+#endif
+
+  Derived& child = static_cast<Derived&>(*this);
+  child.on_receive(handle);
 
   return(0);
 }
 
 template<typename Derived>
-ACE_INT32 mna::tcp::client::middleware<Derived>::handle_signal(int signum, siginfo_t *s, ucontext_t *u)
+ACE_INT32 mna::common<Derived>::handle_signal(int signum, siginfo_t *s, ucontext_t *u)
 {
   Derived& child = static_cast<Derived&>(*this);
   child.on_signal(signum, s, u);
@@ -125,7 +291,7 @@ ACE_INT32 mna::tcp::client::middleware<Derived>::handle_signal(int signum, sigin
 }
 
 template<typename Derived>
-ACE_HANDLE mna::tcp::client::middleware<Derived>::handle_timeout(const ACE_Time_Value &tv, const void *act)
+ACE_HANDLE mna::common<Derived>::handle_timeout(const ACE_Time_Value &tv, const void *act)
 {
   Derived& child = static_cast<Derived&>(*this);
   child.on_timeout(act);
@@ -133,35 +299,49 @@ ACE_HANDLE mna::tcp::client::middleware<Derived>::handle_timeout(const ACE_Time_
 }
 
 template<typename Derived>
-ACE_HANDLE mna::tcp::client::middleware<Derived>::get_handle(void) const
+ACE_HANDLE mna::common<Derived>::handle_close(ACE_HANDLE h, ACE_Reactor_Mask mask)
 {
-  std::cout << "this Fn " << __PRETTY_FUNCTION__ << std::endl;
-  std::cout << "The handle is " << m_remoteConn.get_handle() << std::endl;
-  return(m_remoteConn.get_handle());
+  return(0);
 }
 
 template<typename Derived>
-int32_t mna::tcp::client::middleware<Derived>::to_connect()
+ACE_HANDLE mna::common<Derived>::get_handle(void) const
+{
+  std::cout << "this Fn " << __PRETTY_FUNCTION__ << std::endl;
+  const Derived& child = static_cast<const Derived&>(*this);
+  return(child.handle());
+}
+
+#if 0
+template<typename Derived>
+int32_t mna::common<Derived>::to_connect()
 {
   int32_t connStatus = 0;
 
   connStatus = m_myConn.connect(m_remoteConn, m_remoteAddr);
 
   if(connStatus < 0) {
+
     ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Connection to remoteHost %s Failed\n"), m_remoteAddr.get_host_name()));
+
   } else {
+
     ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l connected to host %s \n"), m_remoteAddr.get_host_name()));
+    return(m_remoteConn.get_handle());
+
   }
 
   return(connStatus);
 }
 
-
 template<typename Derived>
-int32_t mna::tcp::client::middleware<Derived>::to_send(uint8_t* out, ssize_t outLen)
+int32_t mna::common<Derived>::to_send(uint8_t* out, ssize_t outLen)
 {
   int32_t status = 0;
 
+  Derived& child = static_cast<Derived&>(*this);
+  child.to_send();
+#if 0
   status = m_remoteConn.send_n(out, outLen);
 
   if(status < 0) {
@@ -169,10 +349,15 @@ int32_t mna::tcp::client::middleware<Derived>::to_send(uint8_t* out, ssize_t out
   } else {
     ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l sent success \n")));
   }
-
+#endif
   return(status);
 }
 
+template<typename Derived>
+void mna::common<Derived>::set_handle(ACE_HANDLE handle)
+{
+  m_handle = handle;
+}
 
 namespace mna {
   namespace client {
@@ -242,16 +427,16 @@ namespace mna {
 
     };
 
-    class http final : public mna::tcp::client::middleware<mna::client::http> {
+    class udp final : public mna::udp::client::middleware<mna::client::udp> {
       public:
-        http(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort) :middleware(myIPAddress, remoteAddress, peerPort)
+        using receive_t = delegate<int32_t (uint8_t* , ssize_t len)>;
+
+        udp(std::string myIPAddress, std::string remoteAddress, uint16_t peerPort) : middleware(myIPAddress, remoteAddress, peerPort)
         {
         }
 
         int32_t on_receive(uint8_t *in, ssize_t inLen) {
-          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
-          std::string resp((const char *)in, inLen);
-          std::cout << "The response is " << resp.c_str() << std::endl;
+          get_rx()(in, inLen);
         }
 
         int32_t on_timeout(const void* act) {
@@ -263,22 +448,37 @@ namespace mna {
         }
 
         int32_t on_send(uint8_t *in, ssize_t inLen) {
-          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
           to_send(in, inLen);
         }
 
-        int32_t on_connect() {
-          to_connect();
-          std::cout << "This Fn - " << __PRETTY_FUNCTION__ << std::endl;
+        void set_rx(receive_t r)
+        {
+          m_rx = r;
+        }
+
+        receive_t get_rx()
+        {
+          return(m_rx);
+        }
+
+        void set_tx(receive_t r)
+        {
+          m_tx = r;
+        }
+
+        receive_t get_tx()
+        {
+          return(m_tx);
         }
 
       private:
-
+        receive_t m_rx;
+        receive_t m_tx;
     };
   }
 }
 
-
+#endif
 
 
 

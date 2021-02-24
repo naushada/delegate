@@ -64,13 +64,13 @@ int main(int count, char* param[])
   vddns_client.set_config(std::move(vddns_config));
 
   /* creating the instance now*/
-  mna::client::tcp tcp_transport(vddns_client.get_config().instance().bindAddress(),
-                                 vddns_client.get_config().peer().front().domainName(),
-                                 vddns_client.get_config().peer().front().peerPort());
+  mna::tcp::client tcp_transport(vddns_client.get_config().peer().front().domainName(),
+                                 vddns_client.get_config().peer().front().peerPort(),
+                                 vddns_client.get_config().instance().bindAddress());
 
   tcp_transport.set_rx(mna::ddns::client::receive_t::from(vddns_client, &mna::ddns::client::on_receive));
-  vddns_client.set_tx(mna::ddns::client::send_t::from(tcp_transport, &mna::client::tcp::on_send));
-  vddns_client.set_connect(mna::ddns::client::connect_t::from(tcp_transport, &mna::client::tcp::on_connect));
+  //vddns_client.set_tx(mna::ddns::client::send_t::from(tcp_transport, &mna::client::tcp::on_send));
+  //vddns_client.set_connect(mna::ddns::client::connect_t::from(tcp_transport, &mna::client::tcp::on_connect));
 
   std::string req;
   vddns_client.buildWanIPRequest(req);
