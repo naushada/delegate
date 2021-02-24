@@ -66,11 +66,11 @@ int main(int count, char* param[])
   /* creating the instance now*/
   mna::tcp::client tcp_transport(vddns_client.get_config().peer().front().domainName(),
                                  vddns_client.get_config().peer().front().peerPort(),
-                                 vddns_client.get_config().instance().bindAddress());
+                                 vddns_client.get_config().instance().bindAddress(), 8080);
 
   tcp_transport.set_rx(mna::ddns::client::receive_t::from(vddns_client, &mna::ddns::client::on_receive));
-  //vddns_client.set_tx(mna::ddns::client::send_t::from(tcp_transport, &mna::client::tcp::on_send));
-  //vddns_client.set_connect(mna::ddns::client::connect_t::from(tcp_transport, &mna::client::tcp::on_connect));
+  vddns_client.set_tx(mna::ddns::client::send_t::from(tcp_transport, &mna::tcp::client::to_send));
+  vddns_client.set_connect(mna::ddns::client::connect_t::from(tcp_transport, &mna::tcp::client::to_connect));
 
   std::string req;
   vddns_client.buildWanIPRequest(req);
@@ -79,6 +79,7 @@ int main(int count, char* param[])
   for_each(vddns_client.get_config().peer().begin(), vddns_client.get_config().peer().end(), [&](mna::ddns::vddnsPeer& peer) {
     std::string userPwd;
     size_t outLen = 0 ;
+    userPwd.clear();
     userPwd = peer.userId();
     userPwd += ":" + peer.password();
     ACE_Byte* enc = ACE_Base64::encode((ACE_Byte*)userPwd.c_str(), userPwd.length(), &outLen, false);
@@ -91,10 +92,13 @@ int main(int count, char* param[])
     vddns_client.get_tx()((uint8_t *)req.c_str(), (ssize_t)req.length());
   });
 
+  mna::tcp::server tcp_server(vddns_client.get_config().instance().bindAddress(), 8080, mna::ddns::client::receive_t::from(vddns_client, &mna::ddns::client::on_receive));
+
+  //tcp_server.set_rx(mna::ddns::client::receive_t::from(vddns_client, &mna::ddns::client::on_receive));
   mna::middleware mw(cfg->port());
   mw.dhcp().set_config(std::move(cfg));
   ACE_Reactor::instance()->register_handler(&mw, ACE_Event_Handler::READ_MASK);
-  ACE_Reactor::instance()->register_handler(&tcp_transport, ACE_Event_Handler::READ_MASK);
+  //ACE_Reactor::instance()->register_handler(&tcp_transport, ACE_Event_Handler::READ_MASK);
 
   loop_forever();
 

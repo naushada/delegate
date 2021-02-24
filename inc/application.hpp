@@ -55,25 +55,30 @@ namespace mna {
 
         client(ACE_SOCK_Stream conn, ACE_INET_Addr peerAddr)
         {
+          std::cout << __PRETTY_FUNCTION__ << std::endl;
           m_remoteAddr = peerAddr;
           m_remoteConn = conn;
+          ACE_Reactor::instance()->register_handler(this, ACE_Event_Handler::READ_MASK);
         }
 
         int32_t to_connect()
         {
           int32_t ret = 0;
-          ACE_Time_Value to(0,1);
+          ACE_Time_Value to(1,1);
 
-          ret = m_myConn.connect(m_remoteConn, m_remoteAddr, &to, m_myAddr);
+          ret = m_myConn.connect(m_remoteConn, m_remoteAddr);
 
           if(ret < 0) {
             ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Connection to remoteHost %s Failed\n"), m_remoteAddr.get_host_name()));
+            return(ret);
           }
 
+          std::cout << __PRETTY_FUNCTION__ << std::endl;
+          ACE_Reactor::instance()->register_handler(this, ACE_Event_Handler::READ_MASK);
           return(ret);
         }
 
-        int32_t to_send(std::unique_ptr<uint8_t> out, ssize_t outLen)
+        int32_t to_send(uint8_t* out, ssize_t outLen)
         {
           int32_t ret = 0;
           uint32_t offset = 0;
@@ -81,11 +86,11 @@ namespace mna {
 
           do {
 
-            ret = m_remoteConn.send_n((out.get() + offset), newLen);
+            ret = m_remoteConn.send_n((out + offset), newLen);
 
             if(ret < 0) {
               /**! Error*/
-              ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l send_n failed ret = %d"),ret));
+              ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l send_n failed ret = %d\n"),ret));
               /**! if < 0 is returned then ACE library will close the connection, so don't get it closed.*/
               return(0);
             }
@@ -103,6 +108,8 @@ namespace mna {
           std::array<uint8_t, 2048> in;
           int32_t len = 0;
           len = m_remoteConn.recv(in.data(), in.max_size());
+
+          std::cout << __PRETTY_FUNCTION__ << std::endl;
 
           /** Pass the received data to delegate which will process the request.*/
           get_rx()(in.data(), len);
@@ -167,7 +174,9 @@ namespace mna {
           m_myAddr.set(self);
           m_listener.open(m_myAddr, reuseAddr);
           handle(m_listener.get_handle());
+          ACE_Reactor::instance()->register_handler(this, ACE_Event_Handler::ACCEPT_MASK);
           m_rx = rx;
+          std::cout << __PRETTY_FUNCTION__ << std::endl;
         }
 
         int32_t on_receive(int32_t handle)
@@ -180,12 +189,14 @@ namespace mna {
             ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Failed to established connection\n")));
           }
           else {
+            mna::tcp::client* connectedPeer = nullptr;
             /**! Connection is established successfully.*/
-            std::unique_ptr<mna::tcp::client> connectedPeer = std::make_unique<mna::tcp::client>(m_newConn, remoteAddr);
+            ACE_NEW_RETURN(connectedPeer, mna::tcp::client(m_newConn, remoteAddr), -1);
+            //std::unique_ptr<mna::tcp::client> connectedPeer = std::make_unique<mna::tcp::client>(m_newConn, remoteAddr);
             connectedPeer->set_rx(m_rx);
-            ACE_Reactor::instance()->register_handler(connectedPeer.get(), ACE_Event_Handler::RWE_MASK);
-            m_actConn.insert(std::make_pair<int32_t, std::unique_ptr<mna::tcp::client>>(m_newConn.get_handle(), std::move(connectedPeer)));
+            //m_actConn.insert(std::make_pair<int32_t, std::unique_ptr<mna::tcp::client>>(m_newConn.get_handle(), std::move(connectedPeer)));
           }
+          std::cout << __PRETTY_FUNCTION__ << std::endl;
         }
 
         int32_t on_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0)
@@ -219,7 +230,7 @@ namespace mna {
         ACE_SOCK_Stream m_newConn;
         ACE_SOCK_Acceptor m_listener;
         ACE_INET_Addr m_myAddr;
-        std::unordered_map<int32_t, std::unique_ptr<mna::tcp::client>> m_actConn;
+        //std::unordered_map<int32_t, std::unique_ptr<mna::tcp::client>> m_actConn;
     };
   }
 #if 0
@@ -301,6 +312,12 @@ ACE_HANDLE mna::common<Derived>::handle_timeout(const ACE_Time_Value &tv, const 
 template<typename Derived>
 ACE_HANDLE mna::common<Derived>::handle_close(ACE_HANDLE h, ACE_Reactor_Mask mask)
 {
+  ACE_Reactor::instance()->remove_handler(h, ACE_Event_Handler::READ_MASK | ACE_Event_Handler::DONT_CALL);
+
+  if(std::is_pointer<decltype(this)>::value) {
+    delete this;
+  }
+
   return(0);
 }
 

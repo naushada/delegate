@@ -911,6 +911,7 @@ int32_t mna::ddns::client::on_receive(uint8_t* req, ssize_t reqLen)
 {
   std::string in((const char*)req, reqLen);
 
+  std::cout << __PRETTY_FUNCTION__ <<std::endl;
   std::cout << "Response is "<< in.c_str() <<std::endl;
   return(0);
 }
