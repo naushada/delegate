@@ -41,10 +41,10 @@ public:
 
   template <class C, typename =
     typename ::std::enable_if< ::std::is_class<C>{}>::type>
-  explicit delegate(C const& o) noexcept :
-    object_ptr_(const_cast<C*>(&o))
-  {
-  }
+    explicit delegate(C const& o) noexcept :
+      object_ptr_(const_cast<C*>(&o))
+    {
+    }
 
   template <class C>
   delegate(C* const object_ptr, R (C::* const method_ptr)(A...))
@@ -61,7 +61,6 @@ public:
   template <class C>
   delegate(C& object, R (C::* const method_ptr)(A...))
   {
-	  std::cout << "delegate::C& object" << std::endl;
     *this = from(object, method_ptr);
   }
 
@@ -92,7 +91,6 @@ public:
   template <class C>
   delegate& operator=(R (C::* const rhs)(A...))
   {
-	  std::cout << "delegate::operator=" << std::endl;
     return *this = from(static_cast<C*>(object_ptr_), rhs);
   }
 
