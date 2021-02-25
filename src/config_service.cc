@@ -1,7 +1,7 @@
-#ifndef __config_cc__
-#define __config_cc__
+#ifndef __config_service_cc__
+#define __config_service_cc__
 
-#include "protocol.h"
+#include "protocol_layer.h"
 #include "json.h"
 
 mna::dhcp::serverConfig::serverConfig(std::string sname)
@@ -100,4 +100,4 @@ mna::ddns::config::config(std::string sname)
 
 
 
-#endif /*__config_cc__*/
+#endif /*__config_service_cc__*/

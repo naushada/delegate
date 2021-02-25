@@ -1,7 +1,7 @@
 #ifndef __MAIN_CC__
 #define __MAIN_CC__
 
-#include "protocol.h"
+#include "protocol_layer.h"
 #include "middleware.h"
 
 ACE_UINT8 loop_forever(void)

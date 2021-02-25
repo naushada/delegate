@@ -2,7 +2,7 @@
 #define __PROTOCOL_CC__
 
 #include "middleware.h"
-#include "protocol.h"
+#include "protocol_layer.h"
 
 int32_t mna::dhcp::OnDiscover::receive(void* parent, const uint8_t* inPtr, uint32_t inLen)
 {

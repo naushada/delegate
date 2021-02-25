@@ -22,9 +22,9 @@
 #include "ace/Message_Block.h"
 #include "ace/Codecs.h"
 
-#include "protocol.h"
+#include "protocol_layer.h"
 #include "delegate.hpp"
-#include "application.hpp"
+#include "service_provider.hpp"
 
 namespace mna {
 

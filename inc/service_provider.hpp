@@ -1,5 +1,5 @@
-#ifndef __application_hpp__
-#define __application_hpp__
+#ifndef __service_provider_hpp__
+#define __service_provider_hpp__
 
 namespace mna {
   template<typename Derived>
@@ -502,4 +502,4 @@ namespace mna {
 
 
 
-#endif /*__application_hpp__*/
+#endif /*__service_provider__*/
