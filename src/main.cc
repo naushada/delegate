@@ -2,6 +2,7 @@
 #define __MAIN_CC__
 
 #include "protocol_layer.h"
+#include "service_user.h"
 #include "middleware.h"
 
 ACE_UINT8 loop_forever(void)
