@@ -68,13 +68,12 @@ namespace mna {
           ret = m_myConn.connect(m_remoteConn, m_remoteAddr);
 
           if(ret < 0) {
-            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Connection to remoteHost %s Failed\n"), m_remoteAddr.get_host_name()));
+            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Connection to remoteHost %s Failed\n"), m_remoteAddr.get_host_addr()));
             return(ret);
           }
 
-          std::cout << __PRETTY_FUNCTION__ << std::endl;
           ACE_Reactor::instance()->register_handler(this, ACE_Event_Handler::READ_MASK);
-          return(ret);
+          return(0);
         }
 
         int32_t to_send(uint8_t* out, ssize_t outLen)
@@ -91,7 +90,7 @@ namespace mna {
               /**! Error*/
               ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l send_n failed ret = %d\n"),ret));
               /**! if < 0 is returned then ACE library will close the connection, so don't get it closed.*/
-              return(0);
+              return(ret);
             }
 
             newLen -= ret;
@@ -106,20 +105,19 @@ namespace mna {
         {
           std::array<uint8_t, 2048> in;
           int32_t len = 0;
+          int32_t ret = 0;
+
           len = m_remoteConn.recv(in.data(), in.max_size());
 
-          std::cout << __PRETTY_FUNCTION__ << std::endl;
-
           /** Pass the received data to delegate which will process the request.*/
-          get_rx()(in.data(), len);
+          ret = get_rx()(in.data(), len);
 
-          /** handle_close is invoked if -1 is returned.*/
-          if(!len) {
-            /*! by doig so ACE_Reactor shall invoke handle_close hook method. A length 0 means peer has closed the connection.*/
+          if(ret < 0) {
+            /** handle_close is invoked if -1 is returned.*/
             return(-1);
           }
 
-          return(len);
+          return(0);
         }
 
         int32_t on_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0)
@@ -178,7 +176,6 @@ namespace mna {
 
           ACE_Reactor::instance()->register_handler(this, ACE_Event_Handler::ACCEPT_MASK);
           m_rx = rx;
-          std::cout << __PRETTY_FUNCTION__ << std::endl;
         }
 
         int32_t on_receive(int32_t handle)
@@ -189,17 +186,18 @@ namespace mna {
           ret = m_listener.accept(m_newConn, &remoteAddr);
           if(ret < 0) {
             ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Failed to established connection\n")));
+            return(-1);
           }
           else {
             mna::tcp::client* connectedPeer = nullptr;
+            ACE_DEBUG((LM_DEBUG, ACE_TEXT("%D %M %N:%l New connection from %s:%u\n"), remoteAddr.get_host_addr(), remoteAddr.get_port_number()));
             /**! Connection is established successfully.*/
             ACE_NEW_RETURN(connectedPeer, mna::tcp::client(m_newConn, remoteAddr), -1);
             //std::unique_ptr<mna::tcp::client> connectedPeer = std::make_unique<mna::tcp::client>(m_newConn, remoteAddr);
             connectedPeer->set_rx(m_rx);
             //m_actConn.insert(std::make_pair<int32_t, std::unique_ptr<mna::tcp::client>>(m_newConn.get_handle(), std::move(connectedPeer)));
           }
-          std::cout << __PRETTY_FUNCTION__ << std::endl;
-          return(ret);
+          return(0);
         }
 
         int32_t on_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0)
@@ -257,19 +255,20 @@ namespace mna {
         int32_t on_receive(int32_t handle)
         {
           int32_t len = 0;
+          int32_t ret = 0;
+
           std::array<uint8_t, 2048> arr;
 
           len = m_udpConn.recv((void *)arr.data(), arr.max_size(), m_remoteAddr);
 
-          if(len < 0) {
-            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Failed to established connection\n")));
-          }
-          else {
-            get_rx()(arr.data(), len);
+          ret = get_rx()(arr.data(), len);
+
+          if(ret < 0) {
+            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Failed to receive data from %s:%u\n"), m_remoteAddr.get_host_addr(), m_remoteAddr.get_port_number()));
+            return(ret);
           }
 
-          std::cout << __PRETTY_FUNCTION__ << std::endl;
-          return(len);
+          return(0);
         }
 
         int32_t on_signal(int signum, siginfo_t *s = 0, ucontext_t *u = 0)
@@ -288,10 +287,11 @@ namespace mna {
           len = m_udpConn.send((const void *)out, outLen, m_remoteAddr);
 
           if(len < 0) {
-            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l send failed to peer \n")));
+            ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l Failed to send %s:%s \n"), m_remoteAddr.get_host_addr(), m_remoteAddr.get_port_number()));
+            return(len);
           }
 
-          return(len);
+          return(0);
         }
 
         int32_t handle() const
@@ -428,14 +428,20 @@ ACE_HANDLE mna::common<Derived>::handle_close(ACE_HANDLE h, ACE_Reactor_Mask mas
 {
   ACE_Reactor::instance()->remove_handler(h, ACE_Event_Handler::READ_MASK | ACE_Event_Handler::DONT_CALL);
 
-
+  std::cout << "connection is closed --- " << __PRETTY_FUNCTION__ << std::endl;
   Derived& child = static_cast<Derived&>(*this);
   child.on_close(h);
 
-  if(std::is_pointer<decltype(this)>::value) {
-    delete this;
+#if 0
+  if(std::is_reference<decltype(this)>::value) {
+    std::cout << "This is a reference " << std::endl;
   }
 
+  if(std::is_pointer<decltype(this)>::value) {
+    std::cout << "IS POINTER " << std::endl;
+    delete this;
+  }
+#endif
   return(0);
 }
 
