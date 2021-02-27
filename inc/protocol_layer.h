@@ -977,7 +977,8 @@ namespace mna {
           struct in_addr IP_e;
           struct in_addr MASK;
 
-          uint32_t hostAddr;
+          uint32_t hostAddr_s;
+          uint32_t hostAddr_e;
           uint32_t nwAddr;
 
           m_poolIPs.clear();
@@ -988,10 +989,87 @@ namespace mna {
           inet_aton(endIP.c_str(), &IP_e);
           inet_aton(subnetMASK.c_str(), &MASK);
 
-          hostAddr = IP_s.s_addr & MASK.s_addr;
-          nwAddr = IP_s.s_addr & (~MASK.s_addr);
-          std::cout << "hostAddr " << hostAddr << " nwAddr " << nwAddr << std::endl;
+          nwAddr = htonl(IP_s.s_addr) & htonl(MASK.s_addr);
+          hostAddr_s = htonl(IP_s.s_addr) & (~htonl(MASK.s_addr));
+          hostAddr_e = ntohl(IP_e.s_addr) & (~htonl(MASK.s_addr));
 
+          std::array<uint8_t, 4> start;
+          std::array<uint8_t, 4> end;
+          std::array<uint8_t, 4> nw;
+
+          start.fill(0);
+          end.fill(0);
+          nw.fill(0);
+
+          start[3] = (htonl(IP_s.s_addr) >>  0) & 0x0FF;
+          start[2] = (htonl(IP_s.s_addr) >>  8) & 0x0FF;
+          start[1] = (htonl(IP_s.s_addr) >> 16) & 0x0FF;
+          start[0] = (htonl(IP_s.s_addr) >> 24) & 0x0FF;
+
+          end[3] = (htonl(IP_e.s_addr) >>  0) & 0x0FF;
+          end[2] = (htonl(IP_e.s_addr) >>  8) & 0x0FF;
+          end[1] = (htonl(IP_e.s_addr) >> 16) & 0x0FF;
+          end[0] = (htonl(IP_e.s_addr) >> 24) & 0x0FF;
+
+          nw[3] = (nwAddr >>  0) & 0x0FF;
+          nw[2] = (nwAddr >>  8) & 0x0FF;
+          nw[1] = (nwAddr >> 16) & 0x0FF;
+          nw[0] = (nwAddr >> 24) & 0x0FF;
+
+          std::array<uint8_t, 4> tmpArr;
+          struct in_addr tmp;
+          if(std::get<0>(nw) && std::get<1>(nw) && std::get<2>(nw)) {
+            /**! The mask would be 255.255.255.0*/
+            tmpArr[0] = nw[0]; tmpArr[1] = nw[1]; tmpArr[2] = nw[2];
+            for(uint8_t oct4 = std::get<3>(start); oct4 <= std::get<3>(end); oct4++) {
+              tmpArr[3] = oct4;
+              tmp.s_addr = (tmpArr[3] << 24 | tmpArr[2] << 16 | tmpArr[1] << 8 | tmpArr[0]);
+              char* ipStr = inet_ntoa(tmp);
+              std::string ss(ipStr);
+              m_poolIPs.push_back(ss);
+            }
+          }
+          else if(std::get<0>(nw) && std::get<1>(nw)) {
+            /**! The mask would be 255.255.0.0*/
+            tmpArr[0] = nw[0]; tmpArr[1] = nw[1];
+            for(uint8_t oct3 = std::get<2>(start); oct3 <= std::get<2>(end); oct3++) {
+              tmpArr[2] = oct3;
+              for(uint8_t oct4 = std::get<3>(start); oct4 <= std::get<3>(end); oct4++) {
+                tmpArr[3] = oct4;
+                tmp.s_addr = (tmpArr[3] << 24 | tmpArr[2] << 16 | tmpArr[1] << 8 | tmpArr[0]);
+                char* ipStr = inet_ntoa(tmp);
+                std::string ss(ipStr);
+                m_poolIPs.push_back(ss);
+              }
+            }
+          }
+          else {
+            /**! The mask would be 255.0.0.0*/
+            tmpArr[0] = nw[0];
+            for(uint8_t oct2 = std::get<1>(start); oct2 <= std::get<1>(end); oct2++) {
+              tmpArr[1] = oct2;
+              for(uint8_t oct3 = std::get<2>(start); oct3 <= std::get<2>(end); oct3++) {
+                tmpArr[2] = oct3;
+                for(uint8_t oct4 = std::get<3>(start); oct4 <= std::get<3>(end); oct4++) {
+                  tmpArr[3] = oct4;
+                  tmp.s_addr = (tmpArr[3] << 24 | tmpArr[2] << 16 | tmpArr[1] << 8 | tmpArr[0]);
+                  char* ipStr = inet_ntoa(tmp);
+                  std::string ss(ipStr);
+                  m_poolIPs.push_back(ss);
+                }
+              }
+            }
+          }
+        }
+
+        std::vector<std::string>& get_IPPool()
+        {
+          return(m_poolIPs);
+        }
+
+        std::vector<std::string>& get_allocatedIPPool()
+        {
+          return(m_allocatedIPs);
         }
 
       private:

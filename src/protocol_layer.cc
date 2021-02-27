@@ -264,7 +264,6 @@ void mna::dhcp::dhcpEntry::stopTimer(long tid)
 
 int32_t mna::dhcp::dhcpEntry::tx(uint8_t* out, size_t outLen)
 {
-  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
   return(get_downstream()(out, outLen));
 }
 
@@ -615,8 +614,15 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
   } else {
 
     std::cout << "2.dhcpEntry instantiated " << std::endl;
+    /**! Allocating IP now*/
+    std::string IP = *config().get_IPPool().begin();
+    config().get_allocatedIPPool().push_back(IP);
+    config().get_IPPool().erase(config().get_IPPool().begin());
+
+    struct in_addr tmpIP;
+    inet_aton(IP.c_str(), &tmpIP);
     /* New DHCP Client Request, create an entry for it. */
-    std::unique_ptr<dhcpEntry> inst = std::make_unique<dhcpEntry>(this, 123);
+    std::unique_ptr<dhcpEntry> inst = std::make_unique<dhcpEntry>(this, tmpIP.s_addr);
 
     dhcpEntry &dEnt = *(inst.get());
     /* setting timer delegate */
@@ -704,7 +710,6 @@ int32_t mna::eth::ether::tx(uint8_t* out, size_t outLen)
   std::memcpy((void*)&rsp[sizeof(mna::eth::ETH)], out, outLen);
 
   outLen += sizeof(mna::eth::ETH);
-  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
 
   return(get_downstream()(rsp, outLen));
 }
@@ -794,7 +799,6 @@ int32_t mna::ipv4::ip::tx(uint8_t* out, size_t outLen)
   /*This includes IP Header length as well. */
   pIP->tot_len = htons(outLen);
 
-  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
   return(get_downstream()(rsp, outLen));
 }
 
@@ -869,7 +873,6 @@ int32_t mna::transport::udp::rx(const uint8_t* in, uint32_t inLen)
   src_port(pUDP->src_port);
   dst_port(pUDP->dest_port);
 
-  std::cout << "udp::receive "<< std::endl;
   return(m_upstream(&in[sizeof(mna::transport::UDP)], (inLen - sizeof(mna::transport::UDP))));
 }
 
@@ -899,7 +902,6 @@ int32_t mna::transport::udp::tx(uint8_t* out, size_t outLen)
   /*This is including UDP Header length as well.*/
   pUDP->len = htons(outLen);
 
-  std::cout << "Inside " << __PRETTY_FUNCTION__ << std::endl;
   /*Response will have UDP Header + It's payload. Passes it to IP layer.*/
   return(get_downstream()(rsp, outLen));
 }

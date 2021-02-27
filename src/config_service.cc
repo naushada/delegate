@@ -42,6 +42,7 @@ mna::dhcp::serverConfig::serverConfig(std::string sname)
   type(m_parser.get_str(m_parser.json_value_at_key(vrf, "type")));
   port(m_parser.get_str(m_parser.json_value_at_key(vrf, "port")));
   pmtu(m_parser.get_int(m_parser.json_value_at_key(vrf, "mtu")));
+  //fillIPPool(startIP(), endIP(), mask());
 }
 
 
