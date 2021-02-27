@@ -4,7 +4,7 @@
     "primary-dns-ip" : "8.8.8.8",
     "secondary-dns-ip" : "8.8.4.4",
     "domain-name" : "balaagh.net",
-    "lease-time": 24
+    "lease-time": 1296000
   },
 
   "dhcp": {

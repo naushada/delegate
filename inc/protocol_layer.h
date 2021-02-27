@@ -1060,6 +1060,15 @@ namespace mna {
               }
             }
           }
+
+          /** ! removing excludeIPs from poolIPs. */
+          std::remove_if(m_poolIPs.begin(), m_poolIPs.end(), [&](std::string IP) {
+           auto it = std::find_if(excludeIP().begin(), excludeIP().end(), [=](std::string exIP) {
+             return(IP == exIP);
+           });
+
+           return(it != excludeIP().end());
+          });
         }
 
         std::vector<std::string>& get_IPPool()
@@ -1105,19 +1114,7 @@ namespace mna {
         }
 
         dhcpEntry(server* parent, uint32_t clientIP);
-#if 0
-        dhcpEntry(server* parent, uint32_t clientIP)
-        {
-          m_fsm = std::make_unique<FSM>(this);
-          m_parent = parent;
-          std::swap(m_clientIP, clientIP);
-          char hname[255];
-          gethostname(hname, sizeof(hname));
-          parent->m_config.hostName().assign((const char* )hname);
-          /* Initializing the State Machine. */
-          setState(OnDiscover::instance());
-        }
-#endif
+
         FSM& getState() const
         {
           return((*m_fsm.get()).getState());
@@ -1187,6 +1184,16 @@ namespace mna {
         downstream_t& get_downstream()
         {
           return(m_downstream);
+        }
+
+        server& get_parent() const
+        {
+          return(*m_parent);
+        }
+
+        uint32_t get_clientIP() const
+        {
+          return(m_clientIP);
         }
 
       private:
