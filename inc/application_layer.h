@@ -362,6 +362,8 @@ namespace mna {
 
     class client {
       public:
+        using receive_t = delegate<int32_t (uint8_t* in, uint16_t inLen)>;
+
         client(std::string domainName, std::string ip) : m_domainName(domainName), m_ipAddr(ip)
         {
         }
@@ -388,12 +390,12 @@ namespace mna {
           m_ipAddr = ip;
         }
 
-        uint8_t xid()
+        uint16_t xid()
         {
           return(m_xid);
         }
 
-        void xid(uint8_t id)
+        void xid(uint16_t id)
         {
           m_xid = id;
         }
@@ -408,11 +410,31 @@ namespace mna {
           m_rd = d;
         }
 
+        void rx(receive_t r)
+        {
+          m_rx = r;
+        }
+
+        receive_t rx()
+        {
+          return(m_rx);
+        }
+
+        void tx(receive_t r)
+        {
+          m_tx = r;
+        }
+
+        receive_t tx()
+        {
+          return(m_tx);
+        }
+
         int32_t buildQDSection(uint8_t& qdcount, std::array<uint8_t, 1024>& inRef);
         int32_t buildNSSection(std::string& name, std::array<uint8_t, 1024>& inRef);
         int32_t buildRRSection(std::string& name, uint32_t ip, std::array<uint8_t, 1024>& inRef);
         int32_t processQdcount(const std::array<uint8_t, 2048>& in, uint32_t inLen, uint16_t qdcount);
-        int32_t processRequest(const std::array<uint8_t, 2048> in, uint32_t inLen);
+        int32_t processRequest(const uint8_t* in, uint32_t inLen);
         int32_t buildDnsResponse(std::array<uint8_t, 2048>& outRef);
 #if 0
         int32_t processRequest(std::array<uint8_t, 2048> in);
@@ -433,8 +455,10 @@ namespace mna {
         void purgeQData(void);
 #endif
       private:
-        uint8_t m_xid;
+        uint16_t m_xid;
         uint8_t m_rd;
+        receive_t m_rx;
+        receive_t m_tx;
         std::string m_domainName;
         std::string m_ipAddr;
         std::vector<queryData_t> m_qDataVec;

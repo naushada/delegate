@@ -2,6 +2,7 @@
 #define __application_layer_cc__
 
 #include <string>
+#include <cstring>
 #include <vector>
 #include <iostream>
 #include <memory>
@@ -207,9 +208,15 @@ int32_t mna::dns::client::buildRRSection(std::string& name, uint32_t ip, std::ar
   return(offset);
 }
 
-int32_t mna::dns::client::processRequest(const std::array<uint8_t, 2048>in, uint32_t inLen)
+int32_t mna::dns::client::processRequest(const uint8_t* inPtr, uint32_t inLen)
 {
-  const mna::dns::DNS& dnsHdr = *reinterpret_cast<const mna::dns::DNS*>(in.data());
+  std::array<uint8_t, 2048> in;
+  const mna::dns::DNS& dnsHdr = *reinterpret_cast<const mna::dns::DNS*>(inPtr);
+
+  std::memcpy(in.data(), inPtr, inLen);
+
+  xid(dnsHdr.xid);
+  rd(dnsHdr.rd);
 
   if(mna::dns::QUERY == dnsHdr.opcode) {
     if(ntohs(dnsHdr.qdcount)) {
