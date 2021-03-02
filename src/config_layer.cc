@@ -2,7 +2,7 @@
 #define __config_service_cc__
 
 #include "protocol_layer.h"
-#include "service_user.h"
+#include "application_layer.h"
 #include "json.h"
 
 mna::dhcp::serverConfig::serverConfig(std::string sname)

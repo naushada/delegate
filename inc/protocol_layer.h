@@ -488,9 +488,6 @@ namespace mna {
 
   }
 
-  namespace dns {
-  }
-
   class arp {
   };
 

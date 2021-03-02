@@ -24,7 +24,7 @@
 
 #include "protocol_layer.h"
 #include "delegate.hpp"
-#include "service_provider.hpp"
+#include "transport_provider.hpp"
 
 namespace mna {
 
