@@ -1,5 +1,8 @@
 #ifndef __MIDDLEWARE_H__
 #define __MIDDLEWARE_H__
+
+
+
 #include <string>
 #include <unordered_map>
 
@@ -25,6 +28,7 @@
 #include "protocol_layer.h"
 #include "delegate.hpp"
 #include "transport_provider.hpp"
+#include "application_layer.h"
 
 namespace mna {
 
@@ -45,6 +49,7 @@ namespace mna {
       /** This ctor is invoked when instantiated with non-const string.*/
       middleware(std::string& intf)
       {
+        m_dns = nullptr;
         m_intf = intf;
         m_to_dispatch.reset();
         m_rx_dispatch.reset();
@@ -62,6 +67,7 @@ namespace mna {
       /** This ctor will be invoked when instantiated with const string.*/
       middleware(std::string&& intf)
       {
+        m_dns = nullptr;
         m_intf = intf;
         m_to_dispatch.reset();
         m_rx_dispatch.reset();
@@ -156,6 +162,16 @@ namespace mna {
         return(*(m_et.get()));
       }
 
+      mna::dns::server& dns() const
+      {
+        return(*(m_dns.get()));
+      }
+
+      void dns(std::unique_ptr<mna::dns::server> d)
+      {
+        m_dns = std::move(d);
+      }
+
     private:
 
       std::string m_intf;
@@ -173,6 +189,7 @@ namespace mna {
       timer_delegate_t m_to_dispatch;
 
       /*Pointers to layered protocol handler.*/
+      std::unique_ptr<mna::dns::server> m_dns;
       std::unique_ptr<mna::dhcp::server> m_s;
       std::unique_ptr<mna::transport::udp> m_udp;
       std::unique_ptr<mna::ipv4::ip> m_ip;

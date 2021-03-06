@@ -1223,6 +1223,8 @@ namespace mna {
 
         using upstream_t = delegate<int32_t (const uint8_t* in, uint32_t inLen)>;
         using downstream_t = delegate<int32_t (uint8_t* in, size_t inLen)>;
+        /**! dhcp client host to IP update.*/
+        using chost_ip_t = delegate<void (std::string, uint32_t)>;
 
         using start_timer_t = delegate<long (uint32_t, const void*, bool)>;
         using stop_timer_t = delegate<void (long)>;
@@ -1293,6 +1295,16 @@ namespace mna {
           m_config = std::move(cfg);
         }
 
+        void set_chostIP(chost_ip_t ip)
+        {
+          m_chostIP = ip;
+        }
+
+        chost_ip_t get_chostIP()
+        {
+          return(m_chostIP);
+        }
+
       private:
 
         start_timer_t m_start_timer;
@@ -1302,6 +1314,8 @@ namespace mna {
         upstream_t m_upstream;
         downstream_t m_downstream;
 
+        /**! dhcp client host to IP map*/
+        chost_ip_t m_chostIP;
         std::unique_ptr<serverConfig> m_config;
     };
   }

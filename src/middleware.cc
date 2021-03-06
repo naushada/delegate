@@ -2,7 +2,6 @@
 #define __MIDDLEWARE_CC__
 
 #include "middleware.h"
-#include "protocol_layer.h"
 
 /*
  * @brief  This is the hook method for application to define this member function and is invoked by

@@ -1,5 +1,5 @@
 #ifndef __application_layer_h__
-#define __application_layer_h___
+#define __application_layer_h__
 
 
 namespace mna {
@@ -12,6 +12,7 @@ namespace mna {
       vddnsInstance()
       {
         m_bindAddress.clear();
+        m_periodicUpdate = 0;
       }
 
       void bindAddress(std::string m)
@@ -258,8 +259,7 @@ namespace mna {
       RRCLASS_ANY = 255
     };
 
-    struct queryHdr_t
-    {
+    struct queryHdr_t {
       uint8_t m_len;
       std::array<uint8_t, 255> m_value;
 
@@ -292,8 +292,7 @@ namespace mna {
       }
     };
 
-    struct queryData_t
-    {
+    struct queryData_t {
       std::vector<queryHdr_t> m_queryHdrVec;
       /*Query Type.*/
       uint16_t m_qtype;
@@ -304,6 +303,7 @@ namespace mna {
       {
         m_qtype = 0;
         m_qclass = 0;
+        m_queryHdrVec.clear();
       }
 
       ~queryData_t() = default;
@@ -329,8 +329,7 @@ namespace mna {
       }
     };
 
-    typedef struct DNS
-    {
+    typedef struct DNS {
       /*unique transaction id to map request into response.*/
       uint16_t xid;
       /*Recursion desired.*/
@@ -360,15 +359,15 @@ namespace mna {
       uint16_t arcount;
     }__attribute__((packed))DNS;
 
-    class client {
+    class server {
       public:
         using receive_t = delegate<int32_t (uint8_t* in, uint16_t inLen)>;
 
-        client(std::string domainName, std::string ip) : m_domainName(domainName), m_ipAddr(ip)
+        server(std::string domainName, std::string ip) : m_domainName(domainName), m_ipAddr(ip)
         {
         }
 
-        ~client() = default;
+        ~server() = default;
 
         std::string& domainName(void)
         {
@@ -430,30 +429,23 @@ namespace mna {
           return(m_tx);
         }
 
+        void set_chostIP(std::string hname, uint32_t ip)
+        {
+          m_chostToIPUMap[hname] = ip;
+        }
+
+        uint32_t get_chostIP(std::string hname)
+        {
+          return(m_chostToIPUMap[hname]);
+        }
+
         int32_t buildQDSection(uint8_t& qdcount, std::array<uint8_t, 1024>& inRef);
         int32_t buildNSSection(std::string& name, std::array<uint8_t, 1024>& inRef);
         int32_t buildRRSection(std::string& name, uint32_t ip, std::array<uint8_t, 1024>& inRef);
         int32_t processQdcount(const std::array<uint8_t, 2048>& in, uint32_t inLen, uint16_t qdcount);
         int32_t processRequest(const uint8_t* in, uint32_t inLen);
         int32_t buildDnsResponse(std::array<uint8_t, 2048>& outRef);
-#if 0
-        int32_t processRequest(std::array<uint8_t, 2048> in);
-        std::array<uint8_t, 2048> buildResponse(std::array<uint8_t, 2048> in);
-        void processQdcount(ACE_Byte *in, ACE_UINT32 inLen, ACE_UINT16 qdcount);
-        void processAncount(CPGateway &parent, ACE_Byte *in, ACE_UINT32 inLen, ACE_UINT16 ancount);
-        void processNscount(CPGateway &parent, ACE_Byte *in, ACE_UINT32 inLen, ACE_UINT16 nscount);
-        void processArcount(CPGateway &parent, ACE_Byte *in, ACE_UINT32 inLen, ACE_UINT16 arcount);
-        void processDnsQury(CPGateway &parent, ACE_Byte *in, ACE_UINT32 inLen);
-        void getDomainNameFromQuery(std::vector<ACE_CString> &domainName);
-        void getHostNameFromQuery(std::vector<ACE_CString> &hostName);
-        ACE_UINT32 buildNSSection(ACE_CString &name, ACE_Message_Block &mb);
-        ACE_UINT32 buildRRSection(ACE_CString &name, ACE_UINT32 ip, ACE_Message_Block &mb);
-        ACE_UINT32 buildQDSection(ACE_UINT8 &qdcount, ACE_Message_Block &mb);
-        ACE_UINT32 buildANSection(ACE_CString &qname, ACE_UINT32 ip, ACE_Message_Block &mb);
-        ACE_UINT32 buildDnsResponse(CPGateway &parent, ACE_Byte *in, ACE_UINT32 inLen, ACE_Message_Block &mb);
-        void purgeQHdr(void);
-        void purgeQData(void);
-#endif
+
       private:
         uint16_t m_xid;
         uint8_t m_rd;
@@ -462,6 +454,8 @@ namespace mna {
         std::string m_domainName;
         std::string m_ipAddr;
         std::vector<queryData_t> m_qDataVec;
+        /**! dhcp client host name to IP Address map.*/
+        std::unordered_map<std::string, uint32_t> m_chostToIPUMap;
     };
   }
 }

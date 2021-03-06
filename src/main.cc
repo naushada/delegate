@@ -2,7 +2,6 @@
 #define __MAIN_CC__
 
 #include "protocol_layer.h"
-#include "application_layer.h"
 #include "middleware.h"
 
 ACE_UINT8 loop_forever(void)
@@ -97,9 +96,11 @@ int main(int count, char* param[])
 
   //tcp_server.set_rx(mna::ddns::client::receive_t::from(vddns_client, &mna::ddns::client::on_receive));
   mna::middleware mw(cfg->port());
+  std::unique_ptr<mna::dns::server> dns_server = std::make_unique<mna::dns::server>(cfg->domainName(), cfg->ip());
+  mw.dns(std::move(dns_server));
   mw.dhcp().set_config(std::move(cfg));
+
   ACE_Reactor::instance()->register_handler(&mw, ACE_Event_Handler::READ_MASK);
-  //ACE_Reactor::instance()->register_handler(&tcp_transport, ACE_Event_Handler::READ_MASK);
 
   loop_forever();
 

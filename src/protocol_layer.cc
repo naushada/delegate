@@ -544,6 +544,7 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
         }
     }
   }
+
   return(0);
 }
 
@@ -627,7 +628,6 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
     if(!ret) {
       std::cout << "Insertion of dhcpEntry failed " << std::endl;
     }
-
   }
 
   return(0);

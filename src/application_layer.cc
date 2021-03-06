@@ -84,7 +84,7 @@ int32_t mna::ddns::client::buildWanIPUpdateRequest(std::string& req, vddnsPeer& 
 }
 
 /**! DNS Section */
-int32_t mna::dns::client::buildQDSection(uint8_t &qdcount, std::array<uint8_t, 1024>& inRef)
+int32_t mna::dns::server::buildQDSection(uint8_t &qdcount, std::array<uint8_t, 1024>& inRef)
 {
   auto offset = 0;
   mna::dns::queryData_t elm;
@@ -115,7 +115,7 @@ int32_t mna::dns::client::buildQDSection(uint8_t &qdcount, std::array<uint8_t, 1
   return(offset);
 }
 
-int32_t mna::dns::client::buildNSSection(std::string& name, std::array<uint8_t, 1024>& inRef)
+int32_t mna::dns::server::buildNSSection(std::string& name, std::array<uint8_t, 1024>& inRef)
 {
   int idx;
   std::array<uint8_t, 128> label;
@@ -162,7 +162,7 @@ int32_t mna::dns::client::buildNSSection(std::string& name, std::array<uint8_t, 
   return(offset);
 }
 
-int32_t mna::dns::client::buildRRSection(std::string& name, uint32_t ip, std::array<uint8_t, 1024>& inRef)
+int32_t mna::dns::server::buildRRSection(std::string& name, uint32_t ip, std::array<uint8_t, 1024>& inRef)
 {
   int idx;
   std::array<uint8_t, 128> label;
@@ -208,7 +208,7 @@ int32_t mna::dns::client::buildRRSection(std::string& name, uint32_t ip, std::ar
   return(offset);
 }
 
-int32_t mna::dns::client::processRequest(const uint8_t* inPtr, uint32_t inLen)
+int32_t mna::dns::server::processRequest(const uint8_t* inPtr, uint32_t inLen)
 {
   std::array<uint8_t, 2048> in;
   const mna::dns::DNS& dnsHdr = *reinterpret_cast<const mna::dns::DNS*>(inPtr);
@@ -241,7 +241,7 @@ int32_t mna::dns::client::processRequest(const uint8_t* inPtr, uint32_t inLen)
   return(0);
 }
 
-int32_t mna::dns::client::processQdcount(const std::array<uint8_t, 2048>& in, uint32_t inLen, uint16_t qdcount)
+int32_t mna::dns::server::processQdcount(const std::array<uint8_t, 2048>& in, uint32_t inLen, uint16_t qdcount)
 {
   const uint8_t* qData = &in[sizeof(mna::dns::DNS)];
   uint8_t len = 0;
@@ -296,7 +296,7 @@ int32_t mna::dns::client::processQdcount(const std::array<uint8_t, 2048>& in, ui
 }
 
 
-int32_t mna::dns::client::buildDnsResponse(std::array<uint8_t, 2048>& outRef)
+int32_t mna::dns::server::buildDnsResponse(std::array<uint8_t, 2048>& outRef)
 {
   std::array<uint8_t, 1024> myArr;
   uint16_t offset = 0;
@@ -337,6 +337,8 @@ int32_t mna::dns::client::buildDnsResponse(std::array<uint8_t, 2048>& outRef)
   /*AN(1)*/
   myArr.fill(0);
   std::string myDomainName = domainName();
+  /**! dhcp client host name*/
+  std::string chostName;
 
   auto is_myDomainName = [&](mna::dns::queryData_t& arg) -> bool {
 
@@ -350,9 +352,13 @@ int32_t mna::dns::client::buildDnsResponse(std::array<uint8_t, 2048>& outRef)
     }
     else if(arg.m_queryHdrVec.size() > 2) {
 
-      std::string rd0(reinterpret_cast<const char *>(arg.m_queryHdrVec[1].value().data()), arg.m_queryHdrVec[1].len());
-      std::string rd1(reinterpret_cast<const char *>(arg.m_queryHdrVec[2].value().data()), arg.m_queryHdrVec[2].len());
-      std::string dname = rd0 + "." + rd1;
+      std::string rd0(reinterpret_cast<const char *>(arg.m_queryHdrVec[0].value().data()), arg.m_queryHdrVec[0].len());
+      /**! dhcp client host name*/
+      chostName = rd0;
+
+      std::string rd1(reinterpret_cast<const char *>(arg.m_queryHdrVec[1].value().data()), arg.m_queryHdrVec[1].len());
+      std::string rd2(reinterpret_cast<const char *>(arg.m_queryHdrVec[2].value().data()), arg.m_queryHdrVec[2].len());
+      std::string dname = rd1 + "." + rd2;
       std::cout << "domain name from query - >> " << dname.c_str() << std::endl;
       return(myDomainName == dname);
     }
