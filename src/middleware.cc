@@ -345,7 +345,8 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
                 /*Updating timers' member function.*/
                 dhcp().set_start_timer(mna::dhcp::server::start_timer_t::from(*this, &mna::middleware::start_timer));
                 dhcp().set_stop_timer(mna::dhcp::server::stop_timer_t::from(*this, &mna::middleware::stop_timer));
-
+                /*! update dhcp client Host & Its IP to dns server*/
+                dhcp().set_chostIP(mna::dhcp::server::chost_ip_t::from(dns(), &mna::dns::server::set_chostIP));
                 /*Time Out Handling - response timeout*/
                 set_timer_dispatch(mna::dhcp::server::to_timer_t::from(dhcp(), &mna::dhcp::server::timedOut));
                 /*! Kick the processing of the request now.*/
@@ -374,7 +375,6 @@ int32_t mna::middleware::rx(const uint8_t* in, uint32_t inLen)
           default: {
             ACE_ERROR((LM_ERROR, ACE_TEXT("%D %M %N:%l The IP Protocol is %d\n"), pIP->proto));
           }
-
       }
 
       break;

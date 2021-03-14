@@ -1223,7 +1223,7 @@ namespace mna {
 
         using upstream_t = delegate<int32_t (const uint8_t* in, uint32_t inLen)>;
         using downstream_t = delegate<int32_t (uint8_t* in, size_t inLen)>;
-        /**! dhcp client host to IP update.*/
+        /**! Update dhcp client Hostname & IP address */
         using chost_ip_t = delegate<void (std::string, uint32_t)>;
 
         using start_timer_t = delegate<long (uint32_t, const void*, bool)>;

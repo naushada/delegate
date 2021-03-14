@@ -112,7 +112,7 @@ namespace mna {
           /** Pass the received data to delegate which will process the request.*/
           ret = get_rx()(in.data(), len);
 
-          if(ret < 0) {
+          if(ret <= 0) {
             /** handle_close is invoked if -1 is returned.*/
             return(-1);
           }

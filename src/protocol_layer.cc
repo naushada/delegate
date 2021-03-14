@@ -540,6 +540,14 @@ int32_t mna::dhcp::dhcpEntry::parseOptions(const uint8_t* in, uint32_t inLen)
           offset += elm.get_len();
           /*Add it into MAP now.*/
           m_elemDefUMap.insert(std::pair<uint8_t, element_def_t>(tag, elm));
+          it = m_elemDefUMap.find(HOST_NAME);
+
+          /**! insert dhcp client hostname and its IP to dns server via delegate.*/
+          if(it != std::end(m_elemDefUMap)) {
+            element_def_t hname = it->second;
+            std::string dclientName((const char* )hname.m_val.data(), hname.m_len);
+            get_parent().get_chostIP()(dclientName, get_clientIP());
+          }
 
         }
     }
@@ -593,7 +601,7 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
 
   it = m_dhcpUmapOnMAC.find(MAC);
 
-  if(it != m_dhcpUmapOnMAC.end()) {
+  if(it != std::end(m_dhcpUmapOnMAC)) {
 
     /* DHCP Client Entry is found. */
     dhcpEntry &dEnt = *(it->second.get());
@@ -622,6 +630,7 @@ int32_t mna::dhcp::server::rx(const uint8_t* in, uint32_t inLen)
     /* Feed to FSM now. */
     dEnt.rx(in, inLen);
 
+    /**! insert chost to IP into vector of DNS */
     /*insert into unordered_map now.*/
     bool ret = m_dhcpUmapOnMAC.insert(std::pair<std::string, std::unique_ptr<dhcpEntry>>(MAC, std::move(inst))).second;
 
@@ -650,7 +659,7 @@ long mna::dhcp::server::timedOut(const void* txn)
     return(ss == IPArg);
   });
 
-  if(ipIt != dEnt.get_parent().config().get_allocatedIPPool().end()) {
+  if(ipIt != std::end(dEnt.get_parent().config().get_allocatedIPPool())) {
     dEnt.get_parent().config().get_IPPool().push_back(*ipIt);
     dEnt.get_parent().config().get_allocatedIPPool().erase(ipIt);
   }
@@ -763,7 +772,6 @@ int32_t mna::ipv4::ip::rx(const uint8_t* in, uint32_t inLen)
   dst_ip(pIP->dest_ip);
   proto(pIP->proto);
 
-  std::cout << "ip::receive len "<< pIP->len << " src_ip " << std::hex << src_ip() << " dst_ip " << std::hex << dst_ip() << std::endl;
   return(m_upstream(&in[len], (inLen - len)));
 }
 

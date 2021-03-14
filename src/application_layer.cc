@@ -378,6 +378,14 @@ int32_t mna::dns::server::buildDnsResponse(std::array<uint8_t, 2048>& outRef)
     offset = buildRRSection(myDomainName, myIP.s_addr, myArr);
     std::copy_n(myArr.begin(), offset, &outRef[len]);
     len += offset;
+
+    if(chostName.length() > 0) {
+      myArr.fill(0);
+      uint32_t dcIP = get_chostIP(chostName);
+      offset = buildRRSection(chostName, dcIP, myArr);
+      std::copy_n(myArr.begin(), offset, &outRef[len]);
+      len += offset;
+    }
   }
 
 #if 0
